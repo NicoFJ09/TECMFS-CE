@@ -16,11 +16,17 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("TECMFS-CE")
         self.setGeometry(100, 100, screen.width()//2, screen.height()//2)
         
+        # Set minimum size for the main window (not panels)
+        self.setMinimumSize(screen.width()//2, screen.height()//2)
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        main_splitter = QSplitter(Qt.Vertical)
-        top_splitter = QSplitter(Qt.Horizontal)
+        # Main horizontal splitter (left/right)
+        main_splitter = QSplitter(Qt.Horizontal)
+        
+        # Right side vertical splitter (file manager top, log bottom)
+        right_splitter = QSplitter(Qt.Vertical)
         
         splitter_style = """
             QSplitter::handle {
@@ -31,25 +37,52 @@ class MainWindow(QMainWindow):
             }
         """
         main_splitter.setStyleSheet(splitter_style)
-        top_splitter.setStyleSheet(splitter_style)
+        right_splitter.setStyleSheet(splitter_style)
         
-        # DISK STATUS PANEL
+        # DISK STATUS PANEL (left side, full height, 1/3 width)
         self.disk_panel = DiskStatusPanel()
-        top_splitter.addWidget(self.disk_panel)
+        main_splitter.addWidget(self.disk_panel)
         
-        # FILE MANAGER PANEL
+        # FILE MANAGER PANEL (right top)
         self.filemanager_panel = FileManagerPanel()
-        top_splitter.addWidget(self.filemanager_panel)
+        right_splitter.addWidget(self.filemanager_panel)
         
-        top_splitter.setSizes([266, 534])
-        main_splitter.addWidget(top_splitter)
-        
-        # LOG PANEL
+        # LOG PANEL (right bottom)
         self.log_panel = LogPanel()
-        main_splitter.addWidget(self.log_panel)
+        right_splitter.addWidget(self.log_panel)
         
-        main_splitter.setSizes([400, 200])
+        # Set sizes for right splitter (file manager: 400, log: 200)
+        right_splitter.setSizes([400, 200])
+        
+        # Add right splitter to main splitter
+        main_splitter.addWidget(right_splitter)
+        
+        # Set sizes for main splitter (disk: 266 = 1/3, right side: 534 = 2/3)
+        main_splitter.setSizes([266, 534])
+        
+        # Connect splitter signals for immediate updates
+        main_splitter.splitterMoved.connect(self.update)
+        right_splitter.splitterMoved.connect(self.update)
         
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(main_splitter)
+        
+    def resizeEvent(self, event):
+        """Handle main window resize - update all panels"""
+        super().resizeEvent(event)
+        self.update()
+        
+    def update(self):
+        """MAIN UPDATE FUNCTION - Called from main loop and events"""
+        # Update disk status panel
+        if hasattr(self, 'disk_panel'):
+            self.disk_panel.update()
+            
+        # Update file manager panel
+        if hasattr(self, 'filemanager_panel'):
+            self.filemanager_panel.update()
+            
+        # Update log panel
+        if hasattr(self, 'log_panel'):
+            self.log_panel.update()
