@@ -363,7 +363,32 @@ class FileManagerPanel(QFrame):
             """)
         
         self.disk_selector.setFixedWidth(dropdown_width)
-        self.disk_selector.setStyleSheet("")
+        self.disk_selector.setStyleSheet(f"""
+            QComboBox {{
+                border: 2px solid #ccc;
+                border-radius: 4px;
+                font-size: {dropdown_font_size}px;
+                background-color: white;
+                color: black;
+                font-family: Arial;
+                min-height: {controls_height - 8}px;
+                padding-left: 8px;
+            }}
+            QComboBox:focus {{
+                border: 2px solid #007acc;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 15px;
+            }}
+            QComboBox::down-arrow {{
+                width: 0;
+                height: 0;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 6px solid #666;
+            }}
+        """)
         
         self.search_input.setMinimumWidth(search_width)
         self.search_input.setMaximumWidth(search_width)
@@ -450,16 +475,15 @@ class FileManagerPanel(QFrame):
                 selection-color: palette(highlighted-text);
                 alternate-background-color: palette(alternate-base);
                 background-color: palette(base);
-                color: white;
+                color: palette(text);
             }
             QTableWidget::item {
                 padding: 10px;
                 border-bottom: 1px solid palette(mid);
-                color: white;
             }
             QHeaderView::section {
                 background-color: palette(button);
-                color: white;
+                color: palette(button-text);
                 padding: 10px;
                 border: 1px solid palette(mid);
                 font-weight: bold;
@@ -467,18 +491,16 @@ class FileManagerPanel(QFrame):
             }
             QPushButton {
                 background-color: palette(button);
-                color: white;
+                color: palette(button-text);
                 border: 1px solid palette(mid);
                 border-radius: 3px;
                 padding: 4px 8px;
             }
             QPushButton:hover {
                 background-color: palette(light);
-                color: white;
             }
             QPushButton:pressed {
                 background-color: palette(dark);
-                color: white;
             }
         """)
         
