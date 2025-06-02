@@ -9,28 +9,26 @@
 
 ### 💽 **2. Disk Visualization Panel**
 
-* [ ] Create a visual representation for each disk (as blocks or labeled panels)
-* [ ] Assign color/status (OK, Failed, Busy) using color coding
-* [ ] Implement disk **selection logic** (click-to-select, only one active at a time)
-* [ ] Show tooltips or hover info with disk name, usage, etc.
+* [X] Create a visual representation for each disk (as blocks or labeled panels)
+* [X] Assign color/status (OK, Failed, Busy) using color coding
+* [X] Implement disk **selection logic** (click-to-select, only one active at a time)
 
 ---
 
 ### 🔼 **3. Top Action Bar (Per Disk Actions)**
 
-* [ ] Add **Upload File** button – opens file dialog for selected disk
-* [ ] Add **Reboot Disk** button – sends reboot request for selected disk
-* [ ] Ensure buttons are disabled when **no disk is selected**
+* [X] Add **Upload File** button – opens file dialog for selected disk
+* [X] Add **Reboot Disk** button – sends reboot request for selected disk
 
 ---
 
 ### 📁 **4. File Management Table**
 
-* [ ] Add **search bar** to filter file list (live search by filename)
-* [ ] Create **file table** with columns: File Name, Size, Actions
-* [ ] Show only files for the selected disk
-* [ ] Add **Delete** button per row (deletes file from selected disk)
-* [ ] Add **Download** button per row (downloads file from selected disk)
+* [X] Add **search bar** to filter file list (live search by filename)
+* [X] Create **file table** with columns: File Name, Size, Actions
+* [X] Show only files for the selected disk
+* [X] Add **Delete** button per row (deletes file from selected disk)
+* [X] Add **Download** button per row (downloads file from selected disk)
 
 ---
 
