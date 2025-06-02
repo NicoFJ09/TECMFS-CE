@@ -11,11 +11,10 @@ class DiskStatusPanel(QFrame):
     def setup_ui(self):
         self.setFrameStyle(QFrame.StyledPanel)
         
-        # Main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         
-        # Title
+        # Title section
         self.title = QLabel("DISK ARRAY STATUS")
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -24,7 +23,7 @@ class DiskStatusPanel(QFrame):
         # Content layout: cylinders left, info right
         content_layout = QHBoxLayout()
         
-        # Initialize data
+        # Initialize disk data
         self.disks = []
         self.info_labels = []
         disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
@@ -36,7 +35,7 @@ class DiskStatusPanel(QFrame):
             {"status": DiskStatus.FAILED, "used": "0%", "files": "0", "activity": "System error"}
         ]
         
-        # Left side: Cylinders
+        # Cylinder visualization section
         cylinders_layout = QVBoxLayout()
         cylinders_layout.setSpacing(8)
         for i in range(4):
@@ -46,7 +45,7 @@ class DiskStatusPanel(QFrame):
             self.disks.append(cylinder)
             cylinders_layout.addWidget(cylinder)
         
-        # Right side: Info labels
+        # Info labels section
         info_layout = QVBoxLayout()
         info_layout.setSpacing(8)
         for i in range(4):
@@ -54,8 +53,6 @@ class DiskStatusPanel(QFrame):
             info_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             info_widget.setAlignment(Qt.AlignCenter)
             info_widget.setWordWrap(True)
-            
-            # Add AutoFillBackground to prevent transparency issues
             info_widget.setAutoFillBackground(True)
             
             info_text = f"<b>{disk_names[i]}</b><br>"
@@ -68,7 +65,6 @@ class DiskStatusPanel(QFrame):
             self.info_labels.append(info_widget)
             info_layout.addWidget(info_widget)
         
-        # Add to content layout (50/50 split)
         content_layout.addLayout(cylinders_layout, 1)
         content_layout.addLayout(info_layout, 1)
         main_layout.addLayout(content_layout)
@@ -76,15 +72,12 @@ class DiskStatusPanel(QFrame):
         self.update()
         
     def update(self):
-        """Main update function"""
         self.update_responsive_styling()
         for disk in self.disks:
             if hasattr(disk, 'update'):
                 disk.update()
 
-    
     def calculate_max_font_size(self, text, max_width, max_height, min_size=4, max_size=32):
-        """Find largest font that fits in given dimensions"""
         for size in range(max_size, min_size - 1, -1):
             font = QFont("Arial", size)
             metrics = QFontMetrics(font)
@@ -95,18 +88,16 @@ class DiskStatusPanel(QFrame):
         return min_size
         
     def update_responsive_styling(self):
-        """Update text sizes to fit containers perfectly"""
         if self.width() < 50 or self.height() < 50:
             return
         
-        # Fixed padding values
         TITLE_PADDING = 10
         INFO_PADDING = 10
         
-        # Title sizing: calculate actual text space AFTER subtracting padding
-        title_container_width = self.width() - 20  # Account for layout margins
-        title_text_width = title_container_width - (TITLE_PADDING * 2)  # Left + right padding
-        title_text_height = 50 - (TITLE_PADDING * 2)  # Top + bottom padding
+        # Title styling
+        title_container_width = self.width() - 20
+        title_text_width = title_container_width - (TITLE_PADDING * 2)
+        title_text_height = 50 - (TITLE_PADDING * 2)
         
         title_font_size = self.calculate_max_font_size("DISK ARRAY STATUS", title_text_width, title_text_height, min_size=6, max_size=32)
         
@@ -121,22 +112,18 @@ class DiskStatusPanel(QFrame):
             }}
         """)
         
-        # Info labels sizing: calculate actual text space AFTER subtracting padding
-        available_height = self.height() - 120  # Account for title and margins
-        label_container_height = available_height // 4  # 4 labels
-        label_container_width = (self.width() // 2) - 30  # Half width minus margins
+        # Info labels styling
+        available_height = self.height() - 120
+        label_container_height = available_height // 4
+        label_container_width = (self.width() // 2) - 30
         
-        # Calculate ACTUAL text area by subtracting padding from container
-        label_text_width = label_container_width - (INFO_PADDING * 2)  # Left + right padding
-        label_text_height = label_container_height - (INFO_PADDING * 2)  # Top + bottom padding
+        label_text_width = label_container_width - (INFO_PADDING * 2)
+        label_text_height = label_container_height - (INFO_PADDING * 2)
         
-        # Ensure minimum usable space
         label_text_width = max(40, label_text_width)
         label_text_height = max(20, label_text_height)
         
-        # Sample longest text for calculation
         sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nFiles: 12\nLast activity: 3 seconds ago"
-        
         info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=4, max_size=16)
         
         for info_label in self.info_labels:
@@ -152,7 +139,6 @@ class DiskStatusPanel(QFrame):
             """)
             
     def update_disk_status(self, disk_index, status, used_space, files_count, last_activity):
-        """Update disk information"""
         if 0 <= disk_index < len(self.disks):
             self.disks[disk_index].set_status(status)
             
