@@ -1,23 +1,27 @@
 import sys
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QStyleFactory
 from PyQt5.QtCore import QTimer
 from components.main_window import MainWindow
 
 def main():
-    # Create app
     app = QApplication(sys.argv)
     
-    # Show main window
+    # Use native system style
+    if sys.platform == "darwin":  # macOS
+        app.setStyle('macintosh')
+    elif sys.platform.startswith('win'):  # Windows
+        app.setStyle('windowsvista')
+    else:  # Linux
+        app.setStyle('fusion')
+    
     window = MainWindow()
     window.show()
     
-    # Create update timer for responsive updates
     update_timer = QTimer()
-    update_timer.timeout.connect(window.update)  # Call window's update method
-    update_timer.start(100)  # Update every 100ms
+    update_timer.timeout.connect(window.update)
+    update_timer.start(100)
     
-    # Main event loop
     sys.exit(app.exec_())
-
+    
 if __name__ == "__main__":
     main()

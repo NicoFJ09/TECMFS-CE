@@ -88,7 +88,7 @@ class FileManagerPanel(QFrame):
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Fixed)  # Fixed width for Actions column
-        header.resizeSection(2, 220)  # Set Actions column width to 220px
+        header.resizeSection(2, 240) # Set Actions column width to 220px
         
         # Set fixed row height for all rows
         self.file_table.verticalHeader().setDefaultSectionSize(65)
@@ -215,11 +215,11 @@ class FileManagerPanel(QFrame):
             actions_layout.setAlignment(Qt.AlignCenter)  # Center the layout
             
             delete_btn = QPushButton("Delete")
-            delete_btn.setFixedSize(70, 34)  # Bigger buttons to fit better in 50px rows
+            delete_btn.setFixedSize(80, 34)
             delete_btn.clicked.connect(lambda checked, r=row: self.delete_file(r))
             
             download_btn = QPushButton("Download")
-            download_btn.setFixedSize(80, 34)
+            download_btn.setFixedSize(90, 34)
             download_btn.clicked.connect(lambda checked, r=row: self.download_file(r))
             
             actions_layout.addWidget(delete_btn)
@@ -307,27 +307,14 @@ class FileManagerPanel(QFrame):
         if self.width() < 50 or self.height() < 50:
             return
             
-        TITLE_PADDING = 10
-        
-        # Title styling
+        # Title styling - keep only font sizing, remove custom colors/backgrounds
         title_container_width = self.width() - 20
-        title_text_width = title_container_width - (TITLE_PADDING * 2)
-        title_text_height = 50 - (TITLE_PADDING * 2)
-        
-        title_font_size = self.calculate_max_font_size("FILE MANAGER", title_text_width, title_text_height, min_size=6, max_size=32)
+        title_font_size = self.calculate_max_font_size("FILE MANAGER", title_container_width, 50, min_size=10, max_size=24)
         
         self.title.setFont(QFont("Arial", title_font_size, QFont.Bold))
-        self.title.setStyleSheet(f"""
-            QLabel {{
-                color: #2C3E50; 
-                background-color: rgba(200, 220, 240, 255);
-                border-radius: {TITLE_PADDING//2}px;
-                border: 1px solid rgba(150, 170, 190, 255);
-                margin-bottom: {TITLE_PADDING}px;
-            }}
-        """)
+        self.title.setStyleSheet("")  # Remove custom styling, use native
         
-        # Controls bar styling
+        # Controls - use native styling, only set dimensions
         controls_height = 35
         
         label_width = 40
@@ -344,170 +331,49 @@ class FileManagerPanel(QFrame):
             button_width = int(button_width * scale_factor)
             dropdown_width = int(dropdown_width * scale_factor)
         
-        # Font sizes
-        label_font_size = self.calculate_max_font_size("Disk:", label_width, controls_height - 8, min_size=6, max_size=12)
-        dropdown_font_size = self.calculate_max_font_size("DISK1", dropdown_width, controls_height - 8, min_size=6, max_size=12)
+        # Font sizes only
+        label_font_size = self.calculate_max_font_size("Disk:", label_width, controls_height - 8, min_size=8, max_size=12)
+        dropdown_font_size = self.calculate_max_font_size("DISK1", dropdown_width, controls_height - 8, min_size=8, max_size=12)
         input_font_size = self.calculate_max_font_size("Aa", search_width, controls_height - 8, min_size=8, max_size=14)
-        button_font_size = self.calculate_max_font_size("Buscar", button_width, controls_height - 8, min_size=6, max_size=12)
+        button_font_size = self.calculate_max_font_size("Buscar", button_width, controls_height - 8, min_size=8, max_size=12)
         
-        # Apply styling to controls
+        # Apply only font styling, keep native appearance
         disk_label = self.findChildren(QLabel)[1]
         if disk_label and disk_label.text() == "Disk:":
-            disk_label.setStyleSheet(f"""
-                QLabel {{
-                    color: #333;
-                    font-size: {label_font_size}px;
-                    font-family: Arial;
-                    font-weight: bold;
-                }}
-            """)
+            disk_label.setFont(QFont("Arial", label_font_size, QFont.Bold))
+            disk_label.setStyleSheet("")  # Native styling
         
+        # Set dimensions but keep native styling
         self.disk_selector.setFixedWidth(dropdown_width)
-        self.disk_selector.setStyleSheet(f"""
-            QComboBox {{
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                font-size: {dropdown_font_size}px;
-                background-color: white;
-                color: black;
-                font-family: Arial;
-                min-height: {controls_height - 8}px;
-                padding-left: 8px;
-            }}
-            QComboBox:focus {{
-                border: 2px solid #007acc;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 15px;
-            }}
-            QComboBox::down-arrow {{
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #666;
-            }}
-        """)
+        self.disk_selector.setFont(QFont("Arial", dropdown_font_size))
+        self.disk_selector.setStyleSheet("")  # Native styling
         
         self.search_input.setMinimumWidth(search_width)
         self.search_input.setMaximumWidth(search_width)
-        self.search_input.setStyleSheet(f"""
-            QLineEdit {{
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                font-size: {input_font_size}px;
-                background-color: white;
-                color: black;
-                font-family: Arial;
-                min-height: {controls_height - 8}px;
-            }}
-            QLineEdit:focus {{
-                border: 2px solid #007acc;
-            }}
-        """)
+        self.search_input.setFont(QFont("Arial", input_font_size))
+        self.search_input.setStyleSheet("QLineEdit { padding: 4px; }") 
         
         self.search_button.setMinimumWidth(button_width)
         self.search_button.setMaximumWidth(button_width)
-        self.search_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #007acc;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: {button_font_size}px;
-                font-weight: bold;
-                font-family: Arial;
-                min-height: {controls_height - 4}px;
-            }}
-            QPushButton:hover {{
-                background-color: #005a9e;
-            }}
-            QPushButton:pressed {{
-                background-color: #004080;
-            }}
-        """)
+        self.search_button.setFont(QFont("Arial", button_font_size))
+        self.search_button.setStyleSheet("")  # Native styling
         
-        # Bottom buttons styling
-        bottom_button_font_size = self.calculate_max_font_size("Upload File", self.width()//2 - 40, 40, min_size=10, max_size=16)
+        # Bottom buttons - native styling with font sizing
+        bottom_button_font_size = self.calculate_max_font_size("Upload File", self.width()//2 - 40, 35, min_size=10, max_size=16)
         
-        self.upload_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: {bottom_button_font_size}px;
-                font-weight: bold;
-                font-family: Arial;
-            }}
-            QPushButton:hover {{
-                background-color: #218838;
-            }}
-            QPushButton:pressed {{
-                background-color: #1e7e34;
-            }}
-        """)
+        self.upload_button.setFont(QFont("Arial", bottom_button_font_size))
+        self.upload_button.setStyleSheet("")  # Native styling
         
-        self.reboot_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #dc3545;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: {bottom_button_font_size}px;
-                font-weight: bold;
-                font-family: Arial;
-            }}
-            QPushButton:hover {{
-                background-color: #c82333;
-            }}
-            QPushButton:pressed {{
-                background-color: #bd2130;
-            }}
-        """)
+        self.reboot_button.setFont(QFont("Arial", bottom_button_font_size))
+        self.reboot_button.setStyleSheet("")  # Native styling
         
-        # File table with native OS styling and consistent row height
-        self.file_table.setStyleSheet("""
-            QTableWidget {
-                gridline-color: palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-                alternate-background-color: palette(alternate-base);
-                background-color: palette(base);
-                color: palette(text);
-            }
-            QTableWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid palette(mid);
-            }
-            QHeaderView::section {
-                background-color: palette(button);
-                color: palette(button-text);
-                padding: 10px;
-                border: 1px solid palette(mid);
-                font-weight: bold;
-                height: 30px;
-            }
-            QPushButton {
-                background-color: palette(button);
-                color: palette(button-text);
-                border: 1px solid palette(mid);
-                border-radius: 3px;
-                padding: 4px 8px;
-            }
-            QPushButton:hover {
-                background-color: palette(light);
-            }
-            QPushButton:pressed {
-                background-color: palette(dark);
-            }
-        """)
+        # File table - completely native styling
+        self.file_table.setStyleSheet("")  # Remove all custom styling
         
-        # Separator styling
+        # Separators - native styling
         for child in self.findChildren(QFrame):
             if child.frameShape() == QFrame.HLine:
-                child.setStyleSheet("QFrame { color: #666; }")
+                child.setStyleSheet("")  # Native styling
         
     def get_selected_disk(self):
         return self.disk_selector.currentText()

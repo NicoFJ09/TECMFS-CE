@@ -26,7 +26,7 @@ class DiskStatusPanel(QFrame):
         # Initialize disk data
         self.disks = []
         self.info_labels = []
-        disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
+        disk_names = ["Disk1", "Disk2", "Disk3", "Disk4"]
         statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
         disk_data = [
             {"status": DiskStatus.ONLINE, "used": "45%", "files": "8", "activity": "1 minute ago"},
@@ -91,52 +91,32 @@ class DiskStatusPanel(QFrame):
         if self.width() < 50 or self.height() < 50:
             return
         
-        TITLE_PADDING = 10
-        INFO_PADDING = 10
-        
-        # Title styling
+        # Title styling - only font, no custom background/colors
         title_container_width = self.width() - 20
-        title_text_width = title_container_width - (TITLE_PADDING * 2)
-        title_text_height = 50 - (TITLE_PADDING * 2)
-        
-        title_font_size = self.calculate_max_font_size("DISK ARRAY STATUS", title_text_width, title_text_height, min_size=6, max_size=32)
+        title_font_size = self.calculate_max_font_size("DISK ARRAY STATUS", title_container_width, 50, min_size=10, max_size=24)
         
         self.title.setFont(QFont("Arial", title_font_size, QFont.Bold))
-        self.title.setStyleSheet(f"""
-            QLabel {{
-                color: #2C3E50; 
-                background-color: rgba(200, 220, 240, 255);
-                border-radius: {TITLE_PADDING//2}px;
-                border: 1px solid rgba(150, 170, 190, 255);
-                margin-bottom: {TITLE_PADDING}px;
-            }}
-        """)
+        self.title.setStyleSheet("")  # Use native styling
         
-        # Info labels styling
+        # Info labels styling - native appearance with font sizing
         available_height = self.height() - 120
         label_container_height = available_height // 4
         label_container_width = (self.width() // 2) - 30
         
-        label_text_width = label_container_width - (INFO_PADDING * 2)
-        label_text_height = label_container_height - (INFO_PADDING * 2)
+        label_text_width = label_container_width - 20
+        label_text_height = label_container_height - 20
         
         label_text_width = max(40, label_text_width)
         label_text_height = max(20, label_text_height)
         
-        sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nFiles: 12\nLast activity: 3 seconds ago"
-        info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=4, max_size=16)
+        sample_text = "Disk1\nStatus: REBUILDING\nUsed Space: 68%\nFiles: 12\nLast activity: 3 seconds ago"
+        info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=6, max_size=14)
         
         for info_label in self.info_labels:
             info_label.setFont(QFont("Arial", info_font_size))
-            info_label.setStyleSheet(f"""
-                QLabel {{
-                    color: #000000;
-                    background-color: rgba(240, 240, 240, 255);
-                    border-radius: {INFO_PADDING//2}px;
-                    border: 1px solid rgba(200, 200, 200, 255);
-                    margin: {INFO_PADDING//2}px;
-                }}
-            """)
+            info_label.setStyleSheet("")  # Use native styling
+            # Set frame style for visual separation while keeping native appearance
+            info_label.setFrameStyle(QFrame.StyledPanel)
             
     def update_disk_status(self, disk_index, status, used_space, files_count, last_activity):
         if 0 <= disk_index < len(self.disks):
