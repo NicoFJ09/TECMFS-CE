@@ -1,5 +1,9 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QFrame, QSplitter, QVBoxLayout, QApplication
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSplitter, QVBoxLayout, QApplication
 from PyQt5.QtCore import Qt
+
+from .disk_status.disk_status_panel import DiskStatusPanel
+from .file_manager.file_manager_panel import FileManagerPanel
+from .log.log_panel import LogPanel
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -30,21 +34,18 @@ class MainWindow(QMainWindow):
         top_splitter.setStyleSheet(splitter_style)
         
         # DISK STATUS PANEL
-        self.disk_panel = QFrame()
-        self.disk_panel.setFrameStyle(QFrame.StyledPanel)
+        self.disk_panel = DiskStatusPanel()
         top_splitter.addWidget(self.disk_panel)
         
         # FILE MANAGER PANEL
-        self.filemanager_panel = QFrame()
-        self.filemanager_panel.setFrameStyle(QFrame.StyledPanel)
+        self.filemanager_panel = FileManagerPanel()
         top_splitter.addWidget(self.filemanager_panel)
         
         top_splitter.setSizes([266, 534])
         main_splitter.addWidget(top_splitter)
         
         # LOG PANEL
-        self.log_panel = QFrame()
-        self.log_panel.setFrameStyle(QFrame.StyledPanel)
+        self.log_panel = LogPanel()
         main_splitter.addWidget(self.log_panel)
         
         main_splitter.setSizes([400, 200])

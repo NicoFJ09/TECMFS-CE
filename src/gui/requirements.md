@@ -2,8 +2,8 @@
 
 ### 📌 **1. GUI Layout Foundation**
 
-* [ ] Create main window layout with top bar, disk panel, file table, and log panel
-* [ ] Use layout manager to support dynamic resizing and clean separation (e.g. `QSplitter` or grid layout)
+* [X] Create main window layout with top bar, disk panel, file table, and log panel
+* [X] Use layout manager to support dynamic resizing and clean separation (e.g. `QSplitter` or grid layout)
 
 ---
 

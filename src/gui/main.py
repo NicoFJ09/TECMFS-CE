@@ -10,6 +10,8 @@ def main():
     window = MainWindow()
     window.show()
     
+
+
     # Main event loop
     sys.exit(app.exec_())
 
