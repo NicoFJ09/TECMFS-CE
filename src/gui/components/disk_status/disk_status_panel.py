@@ -1,5 +1,7 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QFontMetrics
+from .CylinderWidget import CylinderWidget, DiskStatus
 
 class DiskStatusPanel(QFrame):
     def __init__(self):
@@ -10,29 +12,155 @@ class DiskStatusPanel(QFrame):
         self.setFrameStyle(QFrame.StyledPanel)
         
         # Main layout
-        layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(5, 5, 5, 5)
         
-        # Dummy text label
-        self.label = QLabel("DISK STATUS PANEL\nResize me to see dynamic text!")
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("""
-            QLabel {
-                font-size: 16px;
-                font-weight: bold;
-                color: #333;
-                padding: 20px;
-                background-color: rgba(100, 150, 255, 50);
-                border: 2px dashed #666;
-                border-radius: 10px;
-            }
+        # Title
+        self.title = QLabel("DISK ARRAY STATUS")
+        self.title.setAlignment(Qt.AlignCenter)
+        self.title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        main_layout.addWidget(self.title)
+        
+        # Content layout: cylinders left, info right
+        content_layout = QHBoxLayout()
+        
+        # Initialize data
+        self.disks = []
+        self.info_labels = []
+        disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
+        statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
+        disk_data = [
+            {"status": DiskStatus.ONLINE, "used": "45%", "files": "8", "activity": "1 minute ago"},
+            {"status": DiskStatus.REBUILDING, "used": "68%", "files": "12", "activity": "3 seconds ago"},
+            {"status": DiskStatus.BUSY, "used": "72%", "files": "15", "activity": "Active now"},
+            {"status": DiskStatus.FAILED, "used": "0%", "files": "0", "activity": "System error"}
+        ]
+        
+        # Left side: Cylinders
+        cylinders_layout = QVBoxLayout()
+        cylinders_layout.setSpacing(8)
+        for i in range(4):
+            cylinder = CylinderWidget()
+            cylinder.set_status(statuses[i])
+            cylinder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            self.disks.append(cylinder)
+            cylinders_layout.addWidget(cylinder)
+        
+        # Right side: Info labels
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(8)
+        for i in range(4):
+            info_widget = QLabel()
+            info_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            info_widget.setAlignment(Qt.AlignCenter)
+            info_widget.setWordWrap(True)
+            
+            # Add AutoFillBackground to prevent transparency issues
+            info_widget.setAutoFillBackground(True)
+            
+            info_text = f"<b>{disk_names[i]}</b><br>"
+            info_text += f"Status: <b>{statuses[i].name}</b><br>"
+            info_text += f"Used Space: {disk_data[i]['used']}<br>"
+            info_text += f"Files: {disk_data[i]['files']}<br>"
+            info_text += f"Last activity: {disk_data[i]['activity']}"
+            
+            info_widget.setText(info_text)
+            self.info_labels.append(info_widget)
+            info_layout.addWidget(info_widget)
+        
+        # Add to content layout (50/50 split)
+        content_layout.addLayout(cylinders_layout, 1)
+        content_layout.addLayout(info_layout, 1)
+        main_layout.addLayout(content_layout)
+        
+        self.update()
+        
+    def update(self):
+        """Main update function"""
+        self.update_responsive_styling()
+        for disk in self.disks:
+            if hasattr(disk, 'update'):
+                disk.update()
+
+    
+    def calculate_max_font_size(self, text, max_width, max_height, min_size=4, max_size=32):
+        """Find largest font that fits in given dimensions"""
+        for size in range(max_size, min_size - 1, -1):
+            font = QFont("Arial", size)
+            metrics = QFontMetrics(font)
+            rect = metrics.boundingRect(0, 0, max_width, max_height, Qt.AlignCenter | Qt.TextWordWrap, text)
+            
+            if rect.width() <= max_width and rect.height() <= max_height:
+                return size
+        return min_size
+        
+    def update_responsive_styling(self):
+        """Update text sizes to fit containers perfectly"""
+        if self.width() < 50 or self.height() < 50:
+            return
+        
+        # Fixed padding values
+        TITLE_PADDING = 10
+        INFO_PADDING = 10
+        
+        # Title sizing: calculate actual text space AFTER subtracting padding
+        title_container_width = self.width() - 20  # Account for layout margins
+        title_text_width = title_container_width - (TITLE_PADDING * 2)  # Left + right padding
+        title_text_height = 50 - (TITLE_PADDING * 2)  # Top + bottom padding
+        
+        title_font_size = self.calculate_max_font_size("DISK ARRAY STATUS", title_text_width, title_text_height, min_size=6, max_size=32)
+        
+        self.title.setFont(QFont("Arial", title_font_size, QFont.Bold))
+        self.title.setStyleSheet(f"""
+            QLabel {{
+                color: #2C3E50; 
+                background-color: rgba(200, 220, 240, 255);
+                border-radius: {TITLE_PADDING//2}px;
+                border: 1px solid rgba(150, 170, 190, 255);
+                margin-bottom: {TITLE_PADDING}px;
+            }}
         """)
         
-        layout.addWidget(self.label)
+        # Info labels sizing: calculate actual text space AFTER subtracting padding
+        available_height = self.height() - 120  # Account for title and margins
+        label_container_height = available_height // 4  # 4 labels
+        label_container_width = (self.width() // 2) - 30  # Half width minus margins
         
-    def resizeEvent(self, event):
-        """Update label text based on panel size"""
-        super().resizeEvent(event)
-        if hasattr(self, 'label'):
-            width = self.width()
-            height = self.height()
-            self.label.setText(f"DISK STATUS PANEL\nSize: {width} x {height}\nResize me!")
+        # Calculate ACTUAL text area by subtracting padding from container
+        label_text_width = label_container_width - (INFO_PADDING * 2)  # Left + right padding
+        label_text_height = label_container_height - (INFO_PADDING * 2)  # Top + bottom padding
+        
+        # Ensure minimum usable space
+        label_text_width = max(40, label_text_width)
+        label_text_height = max(20, label_text_height)
+        
+        # Sample longest text for calculation
+        sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nFiles: 12\nLast activity: 3 seconds ago"
+        
+        info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=4, max_size=16)
+        
+        for info_label in self.info_labels:
+            info_label.setFont(QFont("Arial", info_font_size))
+            info_label.setStyleSheet(f"""
+                QLabel {{
+                    color: #000000;
+                    background-color: rgba(240, 240, 240, 255);
+                    border-radius: {INFO_PADDING//2}px;
+                    border: 1px solid rgba(200, 200, 200, 255);
+                    margin: {INFO_PADDING//2}px;
+                }}
+            """)
+            
+    def update_disk_status(self, disk_index, status, used_space, files_count, last_activity):
+        """Update disk information"""
+        if 0 <= disk_index < len(self.disks):
+            self.disks[disk_index].set_status(status)
+            
+            info_text = f"<b>Disk D{disk_index + 1}</b><br>"
+            info_text += f"Status: <b>{status.name}</b><br>"
+            info_text += f"Used Space: {used_space}%<br>"
+            info_text += f"Files: {files_count}<br>"
+            info_text += f"Last activity: {last_activity}"
+            
+            self.info_labels[disk_index].setText(info_text)
+            self.update_responsive_styling()
