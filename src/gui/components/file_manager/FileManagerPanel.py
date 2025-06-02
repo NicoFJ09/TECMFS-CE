@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLineEdit, QPushB
                              QWidget, QSizePolicy, QLabel, QComboBox, QTableWidget, 
                              QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QFontMetrics
+from PyQt5.QtGui import QFont, QFontMetrics, QPalette
+import platform
 
 class FileManagerPanel(QFrame):
     def __init__(self):
@@ -10,6 +11,37 @@ class FileManagerPanel(QFrame):
         self.disk_files = {}  # Store files for each disk
         self.current_disk = "DISK1"  # Track current disk
         self.setup_ui()
+        
+    def is_dark_mode(self):
+        """Detect if the system is in dark mode"""
+        try:
+            if platform.system() == "Darwin":  # macOS
+                import subprocess
+                result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'], 
+                                      capture_output=True, text=True)
+                return result.stdout.strip() == 'Dark'
+            elif platform.system() == "Windows":  # Windows
+                try:
+                    import winreg
+                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
+                                       r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    winreg.CloseKey(key)
+                    return value == 0  # 0 = dark mode, 1 = light mode
+                except:
+                    pass
+            
+            # Fallback: check QPalette for all systems
+            palette = self.palette()
+            window_color = palette.color(QPalette.Window)
+            text_color = palette.color(QPalette.WindowText)
+            return window_color.lightness() < text_color.lightness()
+            
+        except Exception as e:
+            print(f"Dark mode detection failed: {e}")
+            # Ultimate fallback
+            palette = self.palette()
+            return palette.color(QPalette.Window).lightness() < 128
         
     def setup_ui(self):
         self.setFrameStyle(QFrame.StyledPanel)
@@ -302,10 +334,16 @@ class FileManagerPanel(QFrame):
             if rect.width() <= max_width and rect.height() <= max_height:
                 return size
         return min_size
-        
+    
     def update_responsive_styling(self):
         if self.width() < 50 or self.height() < 50:
             return
+            
+        # Determine text color based on dark mode detection
+        is_dark = self.is_dark_mode()
+        table_text_color = "white" if is_dark else "black"
+        header_text_color = "white" if is_dark else "black"
+        button_text_color = "white" if is_dark else "black"
             
         TITLE_PADDING = 10
         
@@ -363,32 +401,7 @@ class FileManagerPanel(QFrame):
             """)
         
         self.disk_selector.setFixedWidth(dropdown_width)
-        self.disk_selector.setStyleSheet(f"""
-            QComboBox {{
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                font-size: {dropdown_font_size}px;
-                background-color: white;
-                color: black;
-                font-family: Arial;
-                min-height: {controls_height - 8}px;
-                padding-left: 8px;
-            }}
-            QComboBox:focus {{
-                border: 2px solid #007acc;
-            }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 15px;
-            }}
-            QComboBox::down-arrow {{
-                width: 0;
-                height: 0;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #666;
-            }}
-        """)
+        self.disk_selector.setStyleSheet("")
         
         self.search_input.setMinimumWidth(search_width)
         self.search_input.setMaximumWidth(search_width)
@@ -467,41 +480,44 @@ class FileManagerPanel(QFrame):
             }}
         """)
         
-        # File table with native OS styling and consistent row height
-        self.file_table.setStyleSheet("""
-            QTableWidget {
+        # File table with smart dark mode detection
+        self.file_table.setStyleSheet(f"""
+            QTableWidget {{
                 gridline-color: palette(mid);
                 selection-background-color: palette(highlight);
                 selection-color: palette(highlighted-text);
                 alternate-background-color: palette(alternate-base);
                 background-color: palette(base);
-                color: palette(text);
-            }
-            QTableWidget::item {
+                color: {table_text_color};
+            }}
+            QTableWidget::item {{
                 padding: 10px;
                 border-bottom: 1px solid palette(mid);
-            }
-            QHeaderView::section {
+                color: {table_text_color};
+            }}
+            QHeaderView::section {{
                 background-color: palette(button);
-                color: palette(button-text);
+                color: {header_text_color};
                 padding: 10px;
                 border: 1px solid palette(mid);
                 font-weight: bold;
                 height: 30px;
-            }
-            QPushButton {
+            }}
+            QPushButton {{
                 background-color: palette(button);
-                color: palette(button-text);
+                color: {button_text_color};
                 border: 1px solid palette(mid);
                 border-radius: 3px;
                 padding: 4px 8px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: palette(light);
-            }
-            QPushButton:pressed {
+                color: {button_text_color};
+            }}
+            QPushButton:pressed {{
                 background-color: palette(dark);
-            }
+                color: {button_text_color};
+            }}
         """)
         
         # Separator styling
