@@ -43,7 +43,7 @@ int main() {
 
     // GET / (sirve index.html desde /src/web/)
     server.Get("/", [](const Request&, Response& res) {
-        std::ifstream file("../web/index.html"); // Ajuste correcto de ruta
+        std::ifstream file("src/web/index.html"); // Ajuste correcto de ruta
         if (file.is_open()) {
             std::string contenido((std::istreambuf_iterator<char>(file)),
                                    std::istreambuf_iterator<char>());

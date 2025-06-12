@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  tecmfs-ce:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./src/uploads:/app/src/uploads
+    working_dir: /app
+    command: ./servidor
