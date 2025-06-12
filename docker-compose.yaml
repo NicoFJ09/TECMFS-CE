@@ -8,6 +8,6 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./src/uploads:/app/src/uploads
+      - ./uploads:/app/uploads
     working_dir: /app
     command: ./servidor

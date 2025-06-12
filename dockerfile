@@ -15,7 +15,7 @@ WORKDIR /app
 COPY . .
 
 # Crea el directorio de uploads si no existe
-RUN mkdir -p /app/src/uploads
+RUN mkdir -p /app/uploads
 
 # Compila el proyecto
 RUN make
