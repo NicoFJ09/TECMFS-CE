@@ -5,7 +5,6 @@
     <Port>8003</Port>
   </Controller>
   <Storage>
-    <!-- Ruta (relativa o absoluta) donde vivirá disk.img -->
     <Path>/data</Path>
     <DiskSize>104857600</DiskSize>
     <BlockSize>4096</BlockSize>
