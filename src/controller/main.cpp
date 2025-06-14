@@ -5,7 +5,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-
+#include <iomanip>
+#include <openssl/md5.h>
 using namespace httplib;
 using json = nlohmann::json;
 
@@ -50,10 +51,18 @@ int main() {
             for (int i = 0; i < stripeSize; ++i) {
                 int blockIdx = b + i;
                 if (blockIdx * blkSize < (int)data.size()) {
-                    stripe.push_back(
-                        data.substr(blockIdx * blkSize, blkSize)
-                    );
+                    size_t avail = data.size() - blockIdx * blkSize;
+                    if (avail >= (size_t)blkSize) {
+                        // Bloque completo
+                        stripe.push_back(data.substr(blockIdx * blkSize, blkSize));
+                    } else {
+                        // Bloque parcial: cortamos y rellenamos con ceros
+                        std::string last = data.substr(blockIdx * blkSize, avail);
+                        last.resize(blkSize, '\0');
+                        stripe.push_back(std::move(last));
+                    }
                 } else {
+                    // Bloque completamente fuera de rango: todo ceros
                     stripe.emplace_back(blkSize, '\0');
                 }
             }
@@ -70,6 +79,21 @@ int main() {
                 std::string payload =
                     (disk == parityDisk ? parity : stripe[dataIdx++]);
                 int diskBlockIdx = stripeIdx;
+                {
+                    // Calcula MD5 de los primeros 4 bytes de payload
+                    unsigned char digest[MD5_DIGEST_LENGTH];
+                    MD5((unsigned char*)payload.data(), blkSize, digest);
+                    std::ostringstream md5str;
+                    for (int i = 0; i < 4; ++i)
+                        md5str << std::hex << std::setw(2) << std::setfill('0')
+                               << (int)digest[i];
+                    std::cerr << "[UPLOAD] stripe=" << stripeIdx
+                              << " disk="   << disk
+                              << " blockIdx=" << (b + (disk < parityDisk ? disk : disk-1))
+                              << " md5prefix="<< md5str.str()
+                              << "\n";
+                }
+                // —— FIN DEBUG ——
                 Client cli(diskAddrs[disk].c_str(), diskPorts[disk]);
                 cli.Post(
                     ("/block?idx=" + std::to_string(diskBlockIdx)).c_str(),
@@ -77,12 +101,16 @@ int main() {
                 );
                 locations.emplace_back(disk, diskBlockIdx);
             }
+            
         }
-
+        
+        std::cerr << "[DEBUG] total stripes=" << (locations.size()/numDisks)
+        << " total blocks=" << locations.size() << "\n";
         fileMap[filename] = std::move(locations);
         json j = { { "status", "OK" } };
         res.set_content(j.dump(), "application/json");
     });
+
 
     // 3) Download RAID-5
     server.Get("/download", [&](const Request& req, Response& res) {
@@ -97,25 +125,24 @@ int main() {
         const auto& locs = itLoc->second;
         int stripes = locs.size() / numDisks;
 
-        std::string output;
-        output.reserve(stripes * (numDisks - 1) * blkSize);
+        // Construimos el buffer crudo completo
+        std::vector<char> buffer;
+        buffer.reserve(stripes * (numDisks - 1) * blkSize);
 
-        // Para cada franja s = 0 … stripes-1
         for (int s = 0; s < stripes; ++s) {
-            // 1) Leer o reconstruir los numDisks bloques de la franja s
             std::vector<std::string> stripeData(numDisks);
             int missing = -1;
+            // 1) Leer o reconstruir cada bloque
             for (int d = 0; d < numDisks; ++d) {
                 auto [diskID, blkIdx] = locs[s * numDisks + d];
                 Client cli(diskAddrs[diskID].c_str(), diskPorts[diskID]);
                 auto r = cli.Get(("/block?idx=" + std::to_string(blkIdx)).c_str());
                 if (r && r->status == 200 && r->body.size() == (size_t)blkSize) {
-                    stripeData[d] = r->body;
+                    stripeData[diskID] = r->body;
                 } else {
-                    missing = d;
+                    missing = diskID;
                 }
             }
-            // Si faltó uno, reconstruirlo por XOR
             if (missing >= 0) {
                 std::string rec(blkSize, '\0');
                 for (int d = 0; d < numDisks; ++d) {
@@ -126,19 +153,22 @@ int main() {
                 }
                 stripeData[missing] = rec;
             }
-            // 2) Concatenar sólo los bloques de datos (omitir paridad)
+            // 2) Añadimos los bloques de datos (omitir paridad) directamente al buffer
             int parityDisk = s % numDisks;
             for (int d = 0; d < numDisks; ++d) {
                 if (d == parityDisk) continue;
-                output += stripeData[d];
+                const auto& blk = stripeData[d];
+                buffer.insert(buffer.end(), blk.begin(), blk.end());
             }
         }
 
-        // 3) Truncar al tamaño original
-        if (output.size() > origSize) {
-            output.resize(origSize);
+        // 3) Truncar a tamaño original si nos pasamos
+        if (buffer.size() > origSize) {
+            buffer.resize(origSize);
         }
-        res.set_content(output, "application/octet-stream");
+
+        // 4) Enviar exactamente origSize bytes de datos crudos
+        res.set_content(buffer.data(), buffer.size(), "application/octet-stream");
     });
 
 

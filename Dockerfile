@@ -1,6 +1,6 @@
 FROM debian:trixie-slim
 
-# Instala compilador, make, Python3, pip y Flask empaquetado por Debian
+# Instala compilador, make, Python3, pip, Flask y las cabeceras de OpenSSL
 RUN apt-get update && apt-get install -y \
       g++ \
       make \
@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
       python3 \
       python3-pip \
       python3-flask \
+      libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Directorio de trabajo

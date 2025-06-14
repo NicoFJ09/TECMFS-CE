@@ -35,10 +35,9 @@ n_blocks  = disk_size // blk_size
 # -----------------------------------
 os.makedirs(storage_path, exist_ok=True)
 disk_file = os.path.join(storage_path, "disk.img")
-# Si no existe o no coincide el tamaño, (re)crearlo
-if not os.path.exists(disk_file) or os.path.getsize(disk_file) != disk_size:
-    with open(disk_file, "wb") as f:
-        f.truncate(disk_size)
+# Siempre (re)crear/truncar
+with open(disk_file, "wb") as f:
+    f.truncate(disk_size)
 
 # -----------------------------------
 # 3) Arrancar Flask

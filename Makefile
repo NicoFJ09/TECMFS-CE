@@ -1,11 +1,12 @@
 # Variables
 CXX      = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -Isrc/controller/include
-LDLIBS   = -lpthread
+LDLIBS   = -lpthread -lcrypto
 
 SRC      = src/controller/main.cpp
 TARGET   = servidor
 
+# Regla principal
 all: $(TARGET)
 
 $(TARGET): $(SRC)
@@ -13,4 +14,3 @@ $(TARGET): $(SRC)
 
 clean:
 	rm -f $(TARGET)
-
