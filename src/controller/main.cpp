@@ -173,21 +173,24 @@ int main() {
 
 
     // 4) RAID status
-    server.Get("/raid-status", [&](const Request&, Response& res) {
+    server.Get("/raid-status", [&](const Request& req, Response& res) {
+        int maxBlocks = req.has_param("max")
+                      ? std::stoi(req.get_param_value("max"))
+                      : totalBlocks;
+    
         json j;
         for (int disk = 0; disk < numDisks; ++disk) {
             json dj = json::array();
-            Client cli(diskAddrs[disk].c_str(), diskPorts[disk]);
-            for (int blk = 0; blk < totalBlocks; ++blk) {
-                auto r = cli.Get(
-                    ("/block?idx=" + std::to_string(blk)).c_str()
-                );
+            Client cli(diskAddrs[disk], diskPorts[disk]);
+            for (int blk = 0; blk < maxBlocks; ++blk) {
+                auto r = cli.Get("/block?idx=" + std::to_string(blk));
                 dj.push_back((r && r->status == 200) ? "OK" : "MISSING");
             }
-            j[std::to_string(disk + 1)] = dj;
+            j[std::to_string(disk+1)] = dj;
         }
         res.set_content(j.dump(), "application/json");
     });
+    
 
     // 5) Servir interfaz web estática
     server.Get("/", [&](const Request&, Response& res) {
