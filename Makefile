@@ -1,11 +1,11 @@
 # Variables
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -Isrc/include
-LDLIBS = -lpthread
-SRC = src/controller/main.cpp
-TARGET = servidor
+CXX      = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -Isrc/controller/include
+LDLIBS   = -lpthread
 
-# Regla principal
+SRC      = src/controller/main.cpp
+TARGET   = servidor
+
 all: $(TARGET)
 
 $(TARGET): $(SRC)
@@ -13,3 +13,4 @@ $(TARGET): $(SRC)
 
 clean:
 	rm -f $(TARGET)
+

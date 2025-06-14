@@ -1,13 +1,67 @@
-version: "3.8"
-
 services:
-  tecmfs-ce:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  # Controller C++ (usa CMD ["./servidor"])
+  controller:
+    build: .
+    container_name: tecmfs-controller
     ports:
       - "8080:8080"
     volumes:
       - ./uploads:/app/uploads
     working_dir: /app
-    command: ./servidor
+
+  # Disk Node 1
+  disk1:
+    build: .
+    container_name: tecmfs-disk1
+    command:
+      - python3
+      - /app/disk_node.py
+      - /app/disk_node_config.xml
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./src/controller/disk_nodes/simulated_disks/disk_1/disk_node.py:/app/disk_node.py
+      - ./src/controller/disk_nodes/simulated_disks/disk_1/disk_node_config.xml:/app/disk_node_config.xml
+      - ./src/controller/disk_nodes/simulated_disks/disk_1:/data
+
+  disk2:
+    build: .
+    container_name: tecmfs-disk2
+    command:
+      - python3
+      - /app/disk_node.py
+      - /app/disk_node_config.xml
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./src/controller/disk_nodes/simulated_disks/disk_2/disk_node.py:/app/disk_node.py
+      - ./src/controller/disk_nodes/simulated_disks/disk_2/disk_node_config.xml:/app/disk_node_config.xml
+      - ./src/controller/disk_nodes/simulated_disks/disk_2:/data
+
+  disk3:
+    build: .
+    container_name: tecmfs-disk3
+    command:
+      - python3
+      - /app/disk_node.py
+      - /app/disk_node_config.xml
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./src/controller/disk_nodes/simulated_disks/disk_3/disk_node.py:/app/disk_node.py
+      - ./src/controller/disk_nodes/simulated_disks/disk_3/disk_node_config.xml:/app/disk_node_config.xml
+      - ./src/controller/disk_nodes/simulated_disks/disk_3:/data
+
+  disk4:
+    build: .
+    container_name: tecmfs-disk4
+    command:
+      - python3
+      - /app/disk_node.py
+      - /app/disk_node_config.xml
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./src/controller/disk_nodes/simulated_disks/disk_4/disk_node.py:/app/disk_node.py
+      - ./src/controller/disk_nodes/simulated_disks/disk_4/disk_node_config.xml:/app/disk_node_config.xml
+      - ./src/controller/disk_nodes/simulated_disks/disk_4:/data
