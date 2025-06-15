@@ -38,8 +38,6 @@ disk_file = os.path.join(storage_path, "disk.img")
 # Siempre (re)crear/truncar
 with open(disk_file, "wb") as f:
     f.truncate(disk_size)
-
-
 # -----------------------------------
 # 3) Arrancar Flask
 # -----------------------------------

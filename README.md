@@ -20,20 +20,20 @@ Todos deben responder HTTP/1.1 200 OK y Content-Length: 4096
 # ---------Subida y Descarga de Archivos----------
 # Upload de un PDF
 curl -H "Content-Type: application/octet-stream" \
-     --data-binary @docs/prueba.pdf \
-     "http://localhost:8080/upload?name=prueba.pdf"
+     --data-binary @docs/test.pdf \
+     "http://localhost:8080/upload?name=test.pdf"
 Debe responder {"status":"OK"}
 # Download y comparación de hashes
-curl "http://localhost:8080/download?name=prueba.pdf" \
+curl "http://localhost:8080/download?name=test.pdf" \
      --output docs/prueba_rec.pdf
-ls -l docs/prueba.pdf docs/prueba_rec.pdf
-md5sum docs/prueba.pdf docs/prueba_rec.pdf
+ls -l docs/test.pdf docs/prueba_rec.pdf
+md5sum docs/test.pdf docs/prueba_rec.pdf
 — Ambos ficheros deben tener el mismo tamaño y el mismo MD5.
 # ---------Toleracia a Fallos----------
 # Simular caída de un disco (por ejemplo disk2)
 docker-compose stop disk2
 # Volver a descargar
-curl "http://localhost:8080/download?name=prueba.pdf" \
+curl "http://localhost:8080/download?name=test.pdf" \
      --output docs/prueba_rec2.pdf
 md5sum docs/prueba.pdf docs/prueba_rec2.pdf
 — Debe seguir coincidiendo el MD5 aun con un nodo caído.
@@ -44,5 +44,5 @@ Obtener un estado rápido de los primeros 100 bloques
 curl -s "http://localhost:8080/raid-status?max=100" | jq .
 # ---------Eliminacio, listado de documentos----------
 curl "http://localhost:8080/list" | jq .
-curl -X DELETE "http://localhost:8080/delete?name=prueba.pdf" | jq .
+curl -X DELETE "http://localhost:8080/delete?name=test.pdf" | jq .
 

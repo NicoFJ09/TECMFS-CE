@@ -234,38 +234,49 @@ int main() {
         res.set_content(ss.str(), "text/html");
     });
 
-    // 6) Eliminar un documento
+    // 4) DELETE RAID-5 (limpia sólo los bloques de este archivo)
     server.Delete("/delete", [&](const Request& req, Response& res) {
         auto filename = req.get_param_value("name");
+        // Busca los metadatos de este archivo
         auto itLoc = fileMap.find(filename);
-        auto itSz  = fileSizeMap.find(filename);
-        if (itLoc == fileMap.end() || itSz == fileSizeMap.end()) {
-            res.status = 404;
+        if (itLoc == fileMap.end()) {
+            // Si no existe, devolvemos error 404
             json j = { { "error", "no existe el documento" } };
+            res.status = 404;
             res.set_content(j.dump(), "application/json");
             return;
         }
-    
-        // 1) Prepara un bloque de ceros
-        std::string zeroBlk(blkSize, '\0');
-    
-        // 2) Para cada bloque en locations, envía ceros
-        for (auto [diskID, stripeIdx] : itLoc->second) {
+
+        // Obtenemos la lista de (diskID, blockIdx) usados al subirlo
+        const auto& locs = itLoc->second;
+        // Preparar un bloque lleno de ceros
+        std::string zeros(blkSize, '\0');
+
+        // Debug: aviso de cuántos bloques vamos a borrar
+        std::cerr << "[DELETE] borrando " << locs.size()
+                << " bloques de '" << filename << "'\n";
+
+        // Para cada bloque, lanzamos un POST de ceros al disco correspondiente
+        for (auto [diskID, blockIdx] : locs) {
+            std::cerr << "[DELETE] disk=" << diskID
+                    << " blockIdx=" << blockIdx << "\n";
             Client cli(diskAddrs[diskID].c_str(), diskPorts[diskID]);
-            // Ignoramos la respuesta; queremos sobreescribir
             cli.Post(
-              ("/block?idx=" + std::to_string(stripeIdx)).c_str(),
-              zeroBlk, "application/octet-stream"
+                ("/block?idx=" + std::to_string(blockIdx)).c_str(),
+                zeros, "application/octet-stream"
             );
         }
-    
-        // 3) Borra los metadatos
+
+        // Limpiar nuestros mapas de metadatos
         fileMap.erase(itLoc);
-        fileSizeMap.erase(itSz);
-    
+        fileSizeMap.erase(filename);
+
+        // Respuesta OK
         json j = { { "status", "deleted" } };
         res.set_content(j.dump(), "application/json");
     });
+
+    
     
 
     // 7) Listar documentos
