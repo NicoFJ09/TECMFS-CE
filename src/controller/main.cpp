@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <openssl/md5.h>
+#include <sstream>
 using namespace httplib;
 using json = nlohmann::json;
 
@@ -46,23 +47,48 @@ int main() {
         std::vector<std::pair<int,int>> locations;
 
         for (int b = 0; b < totalDataBlocks; b += stripeSize) {
-            // Recolectar datos de la franja
+            // ——— Recolectar datos de la franja y rellenar a blkSize ———
             std::vector<std::string> stripe;
+            stripe.reserve(stripeSize);
+        
             for (int i = 0; i < stripeSize; ++i) {
                 int blockIdx = b + i;
-                if (blockIdx * blkSize < (int)data.size()) {
-                    size_t avail = data.size() - blockIdx * blkSize;
-                    if (avail >= (size_t)blkSize) {
-                        // Bloque completo
-                        stripe.push_back(data.substr(blockIdx * blkSize, blkSize));
-                    } else {
-                        // Bloque parcial: cortamos y rellenamos con ceros
-                        std::string last = data.substr(blockIdx * blkSize, avail);
-                        last.resize(blkSize, '\0');
-                        stripe.push_back(std::move(last));
+                size_t offset = static_cast<size_t>(blockIdx) * blkSize;
+        
+                if (offset < data.size()) {
+                    size_t avail = std::min((size_t)blkSize, data.size() - offset);
+        
+                    // Extraemos el chunk parcial
+                    std::string chunk = data.substr(offset, avail);
+        
+                    // ——— DEBUG: muestra hashpfx del fragmento antes de rellenar ———
+                    {
+                        unsigned char d2[16];
+                        // calcula MD5 sobre los 'avail' bytes
+                        MD5(reinterpret_cast<const unsigned char*>(chunk.data()),
+                            avail, d2);
+        
+                        std::ostringstream tmp;
+                        for (int k = 0; k < 4; ++k) {
+                            tmp
+                              << std::hex << std::setw(2) << std::setfill('0')
+                              << static_cast<int>(d2[k]);
+                        }
+        
+                        std::cerr
+                          << "[CHUNK-DBG] stripe=" << (b/stripeSize)
+                          << " i="      << i
+                          << " offset=" << offset
+                          << " avail="  << avail
+                          << " hashpfx="<< tmp.str()
+                          << "\n";
                     }
+                    // —————————————————————————————————————————————————————————
+        
+                    // Rellena el resto a blkSize y guarda
+                    chunk.append(blkSize - avail, '\0');
+                    stripe.push_back(std::move(chunk));
                 } else {
-                    // Bloque completamente fuera de rango: todo ceros
                     stripe.emplace_back(blkSize, '\0');
                 }
             }
@@ -76,24 +102,31 @@ int main() {
             int parityDisk = stripeIdx % numDisks;
             int dataIdx    = 0;
             for (int disk = 0; disk < numDisks; ++disk) {
+                // Calculamos de nuevo cuál bloque de datos concreto estamos enviando
+                int dataPos = (disk < parityDisk) ? disk : (disk - 1);
+                int blockIdx = b + dataPos;
+            
+                // Seleccionamos payload: paridad o bloque de datos
                 std::string payload =
-                    (disk == parityDisk ? parity : stripe[dataIdx++]);
+                    (disk == parityDisk ? parity : stripe[dataPos]);
                 int diskBlockIdx = stripeIdx;
+            
+                // ✱ DEBUG: imprimimos stripeIdx, disk, blockIdx real y MD5 del payload
                 {
-                    // Calcula MD5 de los primeros 4 bytes de payload
-                    unsigned char digest[MD5_DIGEST_LENGTH];
+                    unsigned char digest[16];
                     MD5((unsigned char*)payload.data(), blkSize, digest);
                     std::ostringstream md5str;
                     for (int i = 0; i < 4; ++i)
                         md5str << std::hex << std::setw(2) << std::setfill('0')
                                << (int)digest[i];
-                    std::cerr << "[UPLOAD] stripe=" << stripeIdx
+                    std::cerr << "[UPLOAD-DBG] stripe=" << stripeIdx
                               << " disk="   << disk
-                              << " blockIdx=" << (b + (disk < parityDisk ? disk : disk-1))
-                              << " md5prefix="<< md5str.str()
+                              << " blockIdx="<< blockIdx
+                              << " md5pfx="  << md5str.str()
                               << "\n";
                 }
-                // —— FIN DEBUG ——
+            
+                // Enviamos al disk node
                 Client cli(diskAddrs[disk].c_str(), diskPorts[disk]);
                 cli.Post(
                     ("/block?idx=" + std::to_string(diskBlockIdx)).c_str(),
@@ -101,6 +134,7 @@ int main() {
                 );
                 locations.emplace_back(disk, diskBlockIdx);
             }
+            
             
         }
         
@@ -199,6 +233,50 @@ int main() {
         ss << ifs.rdbuf();
         res.set_content(ss.str(), "text/html");
     });
+
+    // 6) Eliminar un documento
+    server.Delete("/delete", [&](const Request& req, Response& res) {
+        auto filename = req.get_param_value("name");
+        auto itLoc = fileMap.find(filename);
+        auto itSz  = fileSizeMap.find(filename);
+        if (itLoc == fileMap.end() || itSz == fileSizeMap.end()) {
+            res.status = 404;
+            json j = { { "error", "no existe el documento" } };
+            res.set_content(j.dump(), "application/json");
+            return;
+        }
+    
+        // 1) Prepara un bloque de ceros
+        std::string zeroBlk(blkSize, '\0');
+    
+        // 2) Para cada bloque en locations, envía ceros
+        for (auto [diskID, stripeIdx] : itLoc->second) {
+            Client cli(diskAddrs[diskID].c_str(), diskPorts[diskID]);
+            // Ignoramos la respuesta; queremos sobreescribir
+            cli.Post(
+              ("/block?idx=" + std::to_string(stripeIdx)).c_str(),
+              zeroBlk, "application/octet-stream"
+            );
+        }
+    
+        // 3) Borra los metadatos
+        fileMap.erase(itLoc);
+        fileSizeMap.erase(itSz);
+    
+        json j = { { "status", "deleted" } };
+        res.set_content(j.dump(), "application/json");
+    });
+    
+
+    // 7) Listar documentos
+    server.Get("/list", [&](const Request& /*req*/, Response& res) {
+        json j = json::array();
+        for (auto& [name, locs] : fileMap) {
+            j.push_back(name);
+        }
+        res.set_content(j.dump(), "application/json");
+    });
+
 
     std::cout << "Controller escuchando en puerto 8080..." << std::endl;
     server.listen("0.0.0.0", 8080);
