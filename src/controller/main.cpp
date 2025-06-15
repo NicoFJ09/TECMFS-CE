@@ -158,26 +158,29 @@ int main() {
         size_t origSize = itSz->second;
         const auto& locs = itLoc->second;
         int stripes = locs.size() / numDisks;
-
-        // Construimos el buffer crudo completo
-        std::vector<char> buffer;
-        buffer.reserve(stripes * (numDisks - 1) * blkSize);
-
+    
+        std::string output;
+        output.reserve(stripes * (numDisks - 1) * blkSize);
+    
         for (int s = 0; s < stripes; ++s) {
+            // 1) Leer o reconstruir los numDisks bloques de la franja s
             std::vector<std::string> stripeData(numDisks);
             int missing = -1;
-            // 1) Leer o reconstruir cada bloque
+            int blkIdxOfMissing = -1;
             for (int d = 0; d < numDisks; ++d) {
                 auto [diskID, blkIdx] = locs[s * numDisks + d];
-                Client cli(diskAddrs[diskID].c_str(), diskPorts[diskID]);
+                Client cli(diskAddrs[d].c_str(), diskPorts[d]);
                 auto r = cli.Get(("/block?idx=" + std::to_string(blkIdx)).c_str());
                 if (r && r->status == 200 && r->body.size() == (size_t)blkSize) {
-                    stripeData[diskID] = r->body;
+                    stripeData[d] = r->body;
                 } else {
-                    missing = diskID;
+                    missing = d;
+                    blkIdxOfMissing = blkIdx;
                 }
             }
+            // Si faltó uno, reconstruirlo por XOR y además repararlo en el nodo
             if (missing >= 0) {
+                // … reconstrucción de rec …
                 std::string rec(blkSize, '\0');
                 for (int d = 0; d < numDisks; ++d) {
                     if (d == missing) continue;
@@ -186,25 +189,46 @@ int main() {
                     }
                 }
                 stripeData[missing] = rec;
-            }
-            // 2) Añadimos los bloques de datos (omitir paridad) directamente al buffer
+            
+                // ——— DEBUG: mostramos información de la reparación ———
+                std::cerr << "[REPAIR-DBG] stripe="        << s
+                          << " missingDisk="              << missing
+                          << " blkIdxOfMissing="         << blkIdxOfMissing
+                          << " first4bytes(rec)="
+                          << std::hex << std::setw(2) << std::setfill('0')
+                          << (int)(unsigned char)rec[0]
+                          << (int)(unsigned char)rec[1]
+                          << (int)(unsigned char)rec[2]
+                          << (int)(unsigned char)rec[3]
+                          << "\n";
+            
+                // ——— READ-REPAIR: escribe el bloque reconstruido de vuelta ———
+                Client repairCli(diskAddrs[missing].c_str(), diskPorts[missing]);
+                repairCli.Post(
+                    ("/block?idx=" + std::to_string(blkIdxOfMissing)).c_str(),
+                    rec,
+                    "application/octet-stream"
+                );
+                // ——— DEBUG: confirmación del POST de reparación ———
+                std::cerr << "[REPAIR-DBG] POSTed repair to disk="
+                          << missing
+                          << " idx="        << blkIdxOfMissing
+                          << "\n";
+            }             
+            // 2) Concatenar sólo los bloques de datos (omitir paridad)
             int parityDisk = s % numDisks;
             for (int d = 0; d < numDisks; ++d) {
                 if (d == parityDisk) continue;
-                const auto& blk = stripeData[d];
-                buffer.insert(buffer.end(), blk.begin(), blk.end());
+                output += stripeData[d];
             }
         }
-
-        // 3) Truncar a tamaño original si nos pasamos
-        if (buffer.size() > origSize) {
-            buffer.resize(origSize);
+        // 3) Truncar al tamaño original
+        if (output.size() > origSize) {
+            output.resize(origSize);
         }
-
-        // 4) Enviar exactamente origSize bytes de datos crudos
-        res.set_content(buffer.data(), buffer.size(), "application/octet-stream");
+        res.set_content(output, "application/octet-stream");
     });
-
+    
 
     // 4) RAID status
     server.Get("/raid-status", [&](const Request& req, Response& res) {

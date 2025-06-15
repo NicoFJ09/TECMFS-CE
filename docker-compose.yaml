@@ -1,15 +1,13 @@
 services:
-  # Controller C++ (usa CMD ["./servidor"])
   controller:
     build: .
     container_name: tecmfs-controller
+    working_dir: /app
     ports:
       - "8080:8080"
     volumes:
       - ./uploads:/app/uploads
-    working_dir: /app
 
-  # Disk Node 1
   disk1:
     build: .
     container_name: tecmfs-disk1
@@ -20,9 +18,9 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      - disk1-data:/data
       - ./src/controller/disk_nodes/simulated_disks/disk_1/disk_node.py:/app/disk_node.py
       - ./src/controller/disk_nodes/simulated_disks/disk_1/disk_node_config.xml:/app/disk_node_config.xml
-      - ./src/controller/disk_nodes/simulated_disks/disk_1:/data
 
   disk2:
     build: .
@@ -34,9 +32,9 @@ services:
     ports:
       - "8002:8002"
     volumes:
+      - disk2-data:/data
       - ./src/controller/disk_nodes/simulated_disks/disk_2/disk_node.py:/app/disk_node.py
       - ./src/controller/disk_nodes/simulated_disks/disk_2/disk_node_config.xml:/app/disk_node_config.xml
-      - ./src/controller/disk_nodes/simulated_disks/disk_2:/data
 
   disk3:
     build: .
@@ -48,9 +46,9 @@ services:
     ports:
       - "8003:8003"
     volumes:
+      - disk3-data:/data
       - ./src/controller/disk_nodes/simulated_disks/disk_3/disk_node.py:/app/disk_node.py
       - ./src/controller/disk_nodes/simulated_disks/disk_3/disk_node_config.xml:/app/disk_node_config.xml
-      - ./src/controller/disk_nodes/simulated_disks/disk_3:/data
 
   disk4:
     build: .
@@ -62,6 +60,12 @@ services:
     ports:
       - "8004:8004"
     volumes:
+      - disk4-data:/data
       - ./src/controller/disk_nodes/simulated_disks/disk_4/disk_node.py:/app/disk_node.py
       - ./src/controller/disk_nodes/simulated_disks/disk_4/disk_node_config.xml:/app/disk_node_config.xml
-      - ./src/controller/disk_nodes/simulated_disks/disk_4:/data
+
+volumes:
+  disk1-data:
+  disk2-data:
+  disk3-data:
+  disk4-data:

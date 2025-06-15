@@ -36,8 +36,9 @@ n_blocks  = disk_size // blk_size
 os.makedirs(storage_path, exist_ok=True)
 disk_file = os.path.join(storage_path, "disk.img")
 # Siempre (re)crear y trun­car a ceros
-with open(disk_file, "wb") as f:
-    f.truncate(disk_size)
+if not os.path.exists(disk_file):
+    with open(disk_file, "wb") as f:
+        f.truncate(disk_size)
 
 
 # -----------------------------------
@@ -78,6 +79,8 @@ def write_block():
     with open(disk_file, "r+b") as f:
         f.seek(ofs)
         f.write(body)
+        f.flush()
+        os.fsync(f.fileno())
     return ("", 204)
 
 if __name__ == "__main__":
