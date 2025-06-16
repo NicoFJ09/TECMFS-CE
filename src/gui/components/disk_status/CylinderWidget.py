@@ -55,6 +55,13 @@ class CylinderWidget(QWidget):
                 'side': QColor(200, 140, 80),      # Medium orange
                 'bottom': QColor(150, 100, 60)     # Dark orange
             }
+        else:
+            # Default to ONLINE colors if status is unrecognized
+            return {
+                'top': QColor(100, 255, 100),      # Light green
+                'side': QColor(80, 200, 80),       # Medium green
+                'bottom': QColor(60, 150, 60)      # Dark green
+            }
         
     def paintEvent(self, event):
         painter = QPainter(self)

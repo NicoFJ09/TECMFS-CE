@@ -22,13 +22,14 @@ class FileManagerPanel(QFrame):
                 return result.stdout.strip() == 'Dark'
             elif platform.system() == "Windows":  # Windows
                 try:
-                    import winreg
-                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                                       r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-                    winreg.CloseKey(key)
+                    import importlib
+                    winreg = importlib.import_module('winreg')
+                    key = getattr(winreg, 'OpenKey')(getattr(winreg, 'HKEY_CURRENT_USER'),
+                        r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+                    value, _ = getattr(winreg, 'QueryValueEx')(key, "AppsUseLightTheme")
+                    getattr(winreg, 'CloseKey')(key)
                     return value == 0  # 0 = dark mode, 1 = light mode
-                except:
+                except Exception:
                     pass
             
             # Fallback: check QPalette for all systems

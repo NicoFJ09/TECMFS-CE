@@ -16,6 +16,10 @@ Debe devolver {"estado":"activo"}
     for p in 8001 8002 8003 8004; do
     curl -I http://localhost:$p/block?idx=0
     done
+### MacOS
+for p in 8001 8002 8003 8004; do
+    curl -I "http://localhost:$p/block?idx=0"
+done
 Todos deben responder HTTP/1.1 200 OK y Content-Length: 4096
 # ---------Subida y Descarga de Archivos----------
 # Upload de un PDF

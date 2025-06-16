@@ -44,10 +44,10 @@
 
 ### 📜 **6. Log Panel**
 
-* [ ] Create scrolling log panel at bottom of UI
-* [ ] Display timestamped messages for: uploads, deletions, errors, reboots
-* [ ] Append logs on all client-server exchanges
-* [ ] (Optional) Add “Clear Log” button
+* [X] Create scrolling log panel at bottom of UI
+* [X] Display timestamped messages for: uploads, deletions, errors, reboots
+* [X] Append logs on all client-server exchanges
+* [X] (Optional) Add “Clear Log” button
 
 ---
 
@@ -67,17 +67,3 @@
 * [ ] Comment and document key methods (upload, reboot, etc.)
 
 ---
-
-### 📦 **9. Packaging & Testing**
-
-* [ ] Add test functions for each client action (mock server)
-* [ ] Create requirements.txt or setup.py for installation
-* [ ] Write minimal usage documentation (GUI usage, how to run)
-
----
-
-## 🧭 Optional Stretch Goals
-
-* [ ] Implement drag-and-drop for file uploads
-* [ ] Add context menu (right-click) for file actions
-* [ ] Add disk usage bar (progress bar below each disk)
