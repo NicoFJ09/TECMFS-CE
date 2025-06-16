@@ -175,8 +175,10 @@ class LogPanel(QFrame):
         # Log display - native styling with font sizing
         log_font_size = self.calculate_max_font_size("Sample log text", self.width() - 40, 30, min_size=8, max_size=12)
         
-        self.log_display.setFont(QFont("Courier", log_font_size))
+        self.log_display.setFont(QFont("Menlo", log_font_size))
         self.log_display.setStyleSheet("")  # Native styling
+        from PyQt5.QtGui import QFontDatabase
+        print(QFontDatabase().families())
         
         # Controls - native styling with font sizing
         controls_font_size = self.calculate_max_font_size("Clear Logs", 100, 30, min_size=8, max_size=12)

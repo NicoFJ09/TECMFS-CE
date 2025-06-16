@@ -4,12 +4,12 @@ from PyQt5.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLineEdit, QPushB
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QPalette
 import platform
+import importlib
 
 class FileManagerPanel(QFrame):
     def __init__(self):
         super().__init__()
-        self.disk_files = {}  # Store files for each disk
-        self.current_disk = "DISK1"  # Track current disk
+        self.files = []  # Lista única de archivos
         self.setup_ui()
         
     def is_dark_mode(self):
@@ -22,7 +22,6 @@ class FileManagerPanel(QFrame):
                 return result.stdout.strip() == 'Dark'
             elif platform.system() == "Windows":  # Windows
                 try:
-                    import importlib
                     winreg = importlib.import_module('winreg')
                     key = getattr(winreg, 'OpenKey')(getattr(winreg, 'HKEY_CURRENT_USER'),
                         r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
@@ -46,7 +45,6 @@ class FileManagerPanel(QFrame):
         
     def setup_ui(self):
         self.setFrameStyle(QFrame.StyledPanel)
-        
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         
@@ -68,17 +66,6 @@ class FileManagerPanel(QFrame):
         controls_layout.setContentsMargins(0, 0, 0, 0)
         controls_layout.setSpacing(8)
         
-        # Disk selector
-        disk_label = QLabel("Disk:")
-        disk_label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        
-        self.disk_selector = QComboBox()
-        self.disk_selector.addItems(["DISK1", "DISK2", "DISK3", "DISK4"])
-        self.disk_selector.setCurrentIndex(0)
-        self.disk_selector.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        # Connect disk change to load different files
-        self.disk_selector.currentTextChanged.connect(self.on_disk_changed)
-        
         # Search input
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Nombre de archivo...")
@@ -91,8 +78,6 @@ class FileManagerPanel(QFrame):
         self.search_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.search_button.clicked.connect(self.search_files)
         
-        controls_layout.addWidget(disk_label, 0)
-        controls_layout.addWidget(self.disk_selector, 0)
         controls_layout.addWidget(self.search_input, 1)
         controls_layout.addWidget(self.search_button, 0)
         
@@ -107,7 +92,7 @@ class FileManagerPanel(QFrame):
         separator.setFrameShadow(QFrame.Sunken)
         main_layout.addWidget(separator)
         
-        # File table with OS native styling
+        # File table
         self.file_table = QTableWidget()
         self.file_table.setColumnCount(3)
         self.file_table.setHorizontalHeaderLabels(["File Name", "Size", "Actions"])
@@ -133,10 +118,10 @@ class FileManagerPanel(QFrame):
         self.file_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         # Initialize sample data for all disks
-        self.populate_disk_data()
+        self.populate_files()
         
         # Load initial disk data
-        self.load_disk_files()
+        self.load_files()
         
         main_layout.addWidget(self.file_table, 1)
         
@@ -171,63 +156,40 @@ class FileManagerPanel(QFrame):
         
         self.update()
         
-    def populate_disk_data(self):
-        """Initialize sample files for each disk"""
-        self.disk_files = {
-            "DISK1": [
-                ("system_config.ini", "2 KB"),
-                ("boot.img", "128 MB"),
-                ("kernel.bin", "45 MB"),
-                ("drivers.sys", "15 MB"),
-                ("startup.exe", "3.2 MB")
-            ],
-            "DISK2": [
-                ("document.pdf", "2.1 MB"),
-                ("presentation.pptx", "12.5 MB"),
-                ("spreadsheet.xlsx", "3.7 MB"),
-                ("report.docx", "1.8 MB"),
-                ("notes.txt", "25 KB"),
-                ("manual.pdf", "8.9 MB")
-            ],
-            "DISK3": [
-                ("vacation_2023.jpg", "4.2 MB"),
-                ("family_photo.png", "2.8 MB"),
-                ("sunset.raw", "45 MB"),
-                ("wedding_video.mp4", "1.2 GB"),
-                ("music_collection.zip", "89 MB"),
-                ("birthday.mov", "567 MB")
-            ],
-            "DISK4": [
-                ("backup_db.sql", "234 MB"),
-                ("server_logs.txt", "15 KB"),
-                ("config.json", "3 KB"),
-                ("application.jar", "67 MB"),
-                ("source_code.zip", "12 MB"),
-                ("database.backup", "456 MB"),
-                ("scripts.tar.gz", "8.5 MB")
-            ]
-        }
-    
-    def on_disk_changed(self, disk_name):
-        """Handle disk selection change"""
-        self.current_disk = disk_name
-        self.search_input.clear()  # Clear search when changing disks
-        self.load_disk_files()
-        print(f"Switched to {disk_name}")
-    
-    def load_disk_files(self):
-        """Load files for the current disk"""
-        current_files = self.disk_files.get(self.current_disk, [])
-        self.display_files(current_files)
-    
-    def get_current_disk_files(self):
-        """Get files for the current disk"""
-        return self.disk_files.get(self.current_disk, [])
-    
+    def populate_files(self):
+        """Inicializa archivos de ejemplo en el almacenamiento distribuido"""
+        self.files = [
+            ("system_config.ini", "2 KB"),
+            ("boot.img", "128 MB"),
+            ("kernel.bin", "45 MB"),
+            ("drivers.sys", "15 MB"),
+            ("startup.exe", "3.2 MB"),
+            ("document.pdf", "2.1 MB"),
+            ("presentation.pptx", "12.5 MB"),
+            ("spreadsheet.xlsx", "3.7 MB"),
+            ("report.docx", "1.8 MB"),
+            ("notes.txt", "25 KB"),
+            ("manual.pdf", "8.9 MB"),
+            ("vacation_2023.jpg", "4.2 MB"),
+            ("family_photo.png", "2.8 MB"),
+            ("sunset.raw", "45 MB"),
+            ("wedding_video.mp4", "1.2 GB"),
+            ("music_collection.zip", "89 MB"),
+            ("birthday.mov", "567 MB"),
+            ("backup_db.sql", "234 MB"),
+            ("server_logs.txt", "15 KB"),
+            ("config.json", "3 KB"),
+            ("application.jar", "67 MB"),
+            ("source_code.zip", "12 MB"),
+            ("database.backup", "456 MB"),
+            ("scripts.tar.gz", "8.5 MB")
+        ]
+
+    def load_files(self):
+        self.display_files(self.files)
+
     def display_files(self, files_to_display):
-        """Display the given list of files in the table"""
         self.file_table.setRowCount(len(files_to_display))
-        
         for row, (filename, size) in enumerate(files_to_display):
             # File name
             name_item = QTableWidgetItem(filename)
@@ -259,51 +221,46 @@ class FileManagerPanel(QFrame):
             actions_layout.addWidget(download_btn)
             
             self.file_table.setCellWidget(row, 2, actions_widget)
-    
+
     def search_files(self):
         """Search for files matching the search term in the current disk"""
         search_term = self.search_input.text().strip().lower()
-        current_files = self.get_current_disk_files()
         
         if not search_term:
             # If search is empty, show all files from current disk
-            self.display_files(current_files)
+            self.display_files(self.files)
             return
         
         # Filter files that contain the search term in their name
-        matching_files = []
-        for filename, size in current_files:
-            if search_term in filename.lower():
-                matching_files.append((filename, size))
+        matching_files = [(f, s) for f, s in self.files if search_term in f.lower()]
         
         # Display the filtered results
         self.display_files(matching_files)
         
         # Show feedback in console
         if matching_files:
-            print(f"Found {len(matching_files)} file(s) matching '{search_term}' in {self.current_disk}")
+            print(f"Found {len(matching_files)} file(s) matching '{search_term}'")
         else:
-            print(f"No files found matching '{search_term}' in {self.current_disk}")
-    
+            print(f"No files found matching '{search_term}'")
+
     def delete_file(self, row):
         """Handle file deletion from current disk"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Deleting file: {filename} from {self.current_disk}")
+            print(f"Deleting file: {filename}")
             
             # Remove from current disk's file list
-            current_files = self.disk_files.get(self.current_disk, [])
-            self.disk_files[self.current_disk] = [(f, s) for f, s in current_files if f != filename]
+            self.files = [(f, s) for f, s in self.files if f != filename]
             
             # Refresh the current view (re-apply search if active)
             self.search_files()
-        
+
     def download_file(self, row):
         """Handle file download"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Downloading file: {filename} from {self.current_disk}")
-    
+            print(f"Downloading file: {filename}")
+
     def upload_file(self):
         """Handle file upload - opens file dialog and prints absolute path"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -320,7 +277,7 @@ class FileManagerPanel(QFrame):
     
     def reboot_disk(self):
         """Handle disk reboot"""
-        print(f"Rebooting {self.current_disk}...")
+        print(f"Rebooting storage unit...")
         # Here you would normally handle the actual disk reboot functionality
         
     def update(self):
@@ -384,26 +341,10 @@ class FileManagerPanel(QFrame):
             dropdown_width = int(dropdown_width * scale_factor)
         
         # Font sizes
-        label_font_size = self.calculate_max_font_size("Disk:", label_width, controls_height - 8, min_size=6, max_size=12)
-        dropdown_font_size = self.calculate_max_font_size("DISK1", dropdown_width, controls_height - 8, min_size=6, max_size=12)
-        input_font_size = self.calculate_max_font_size("Aa", search_width, controls_height - 8, min_size=8, max_size=14)
-        button_font_size = self.calculate_max_font_size("Buscar", button_width, controls_height - 8, min_size=6, max_size=12)
+        input_font_size = self.calculate_max_font_size("Aa", 200, 27, min_size=8, max_size=14)
+        button_font_size = self.calculate_max_font_size("Buscar", 80, 27, min_size=6, max_size=12)
         
         # Apply styling to controls
-        disk_label = self.findChildren(QLabel)[1]
-        if disk_label and disk_label.text() == "Disk:":
-            disk_label.setStyleSheet(f"""
-                QLabel {{
-                    color: #333;
-                    font-size: {label_font_size}px;
-                    font-family: Arial;
-                    font-weight: bold;
-                }}
-            """)
-        
-        self.disk_selector.setFixedWidth(dropdown_width)
-        self.disk_selector.setStyleSheet("")
-        
         self.search_input.setMinimumWidth(search_width)
         self.search_input.setMaximumWidth(search_width)
         self.search_input.setStyleSheet(f"""
