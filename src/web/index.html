@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>TECMFS - Estado RAID</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 4px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>TECMedia File System - Controller Node</h1>
+    <p>Total de archivos almacenados: <span id="totalArchivos">0</span></p>
+    <h2>Archivos en el sistema:</h2>
+    <ul id="listaArchivos">
+        <li>Cargando estado...</li>
+    </ul>
+
+    <script>
+        function actualizarEstado() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    let lista = document.getElementById('listaArchivos');
+                    lista.innerHTML = ''; // Limpiar lista previa
+
+                    const archivos = Object.keys(data);
+                    document.getElementById('totalArchivos').textContent = archivos.length;
+
+                    if (archivos.length === 0) {
+                        lista.innerHTML = '<li>No hay archivos almacenados.</li>';
+                    } else {
+                        archivos.forEach(nombre => {
+                            const item = document.createElement('li');
+                            item.textContent = `Archivo: ${nombre} | Ruta: ${data[nombre]}`;
+                            lista.appendChild(item);
+                        });
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('listaArchivos').innerHTML = '<li class="error">Error al obtener estado del servidor.</li>';
+                    document.getElementById('totalArchivos').textContent = '0';
+                });
+        }
+
+        actualizarEstado();
+        setInterval(actualizarEstado, 2000); // Actualiza cada 2 segundos
+    </script>
+</body>
+</html>

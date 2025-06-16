@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DiskNodeConfig>
+  <Controller>
+    <IP>127.0.0.1</IP>
+    <Port>8004</Port>
+  </Controller>
+  <Storage>
+    <Path>/data</Path>
+    <DiskSize>104857600</DiskSize>
+    <BlockSize>4096</BlockSize>
+  </Storage>
+</DiskNodeConfig>
