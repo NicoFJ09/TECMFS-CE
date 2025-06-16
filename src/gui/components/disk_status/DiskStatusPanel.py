@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy
+from PyQt5.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy, QWidget, QComboBox, QPushButton
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics
 from .CylinderWidget import CylinderWidget, DiskStatus
@@ -64,11 +64,25 @@ class DiskStatusPanel(QFrame):
             info_widget.setText(info_text)
             self.info_labels.append(info_widget)
             info_layout.addWidget(info_widget)
-        
         content_layout.addLayout(cylinders_layout, 1)
         content_layout.addLayout(info_layout, 1)
         main_layout.addLayout(content_layout)
-        
+        # Disk controls (dropdown + reboot)
+        controls_container = QWidget()
+        controls_layout = QHBoxLayout(controls_container)
+        controls_layout.setContentsMargins(40, 10, 40, 10)
+        controls_layout.setSpacing(20)
+        self.disk_selector = QComboBox()
+        self.disk_selector.addItems(["Disk D1", "Disk D2", "Disk D3", "Disk D4"])
+        self.disk_selector.setCurrentIndex(0)
+        self.disk_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.reboot_button = QPushButton("Reboot Disk")
+        self.reboot_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.reboot_button.setMinimumHeight(35)
+        controls_layout.addWidget(self.disk_selector)
+        controls_layout.addSpacing(20)
+        controls_layout.addWidget(self.reboot_button)
+        main_layout.addWidget(controls_container)
         self.update()
         
     def update(self):
@@ -90,10 +104,8 @@ class DiskStatusPanel(QFrame):
     def update_responsive_styling(self):
         if self.width() < 50 or self.height() < 50:
             return
-        
         TITLE_PADDING = 10
         INFO_PADDING = 10
-        
         # Title styling
         title_container_width = self.width() - 20
         title_text_width = title_container_width - (TITLE_PADDING * 2)
@@ -137,7 +149,43 @@ class DiskStatusPanel(QFrame):
                     margin: {INFO_PADDING//2}px;
                 }}
             """)
-            
+        # Responsive adjustment for dropdown and reboot button
+        if hasattr(self, 'disk_selector') and hasattr(self, 'reboot_button'):
+            container_width = self.width() - 80  # 40px padding on each side
+            dropdown_width = int(container_width * 0.45)
+            button_width = int(container_width * 0.45)
+            dropdown_font_size = self.calculate_max_font_size("Disk D1", dropdown_width, 35, min_size=8, max_size=18)
+            reboot_font_size = self.calculate_max_font_size("Reboot Disk", button_width, 35, min_size=10, max_size=22)
+            self.disk_selector.setMinimumWidth(dropdown_width)
+            self.disk_selector.setMaximumWidth(dropdown_width)
+            self.disk_selector.setStyleSheet(f"""
+                QComboBox {{
+                    font-size: {dropdown_font_size}px;
+                    min-height: 32px;
+                    padding: 4px 12px;
+                }}
+            """)
+            self.reboot_button.setMinimumWidth(button_width)
+            self.reboot_button.setMaximumWidth(button_width)
+            self.reboot_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #dc3545;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: {reboot_font_size}px;
+                    font-weight: bold;
+                    font-family: Arial;
+                    min-height: 35px;
+                }}
+                QPushButton:hover {{
+                    background-color: #c82333;
+                }}
+                QPushButton:pressed {{
+                    background-color: #bd2130;
+                }}
+            """)
+        
     def update_disk_status(self, disk_index, status, used_space, files_count, last_activity):
         if 0 <= disk_index < len(self.disks):
             self.disks[disk_index].set_status(status)

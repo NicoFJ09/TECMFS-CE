@@ -142,16 +142,9 @@ class FileManagerPanel(QFrame):
         self.upload_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.upload_button.setMinimumHeight(35)
         self.upload_button.clicked.connect(self.upload_file)
-        
-        # Reboot disk button
-        self.reboot_button = QPushButton("Reboot Disk")
-        self.reboot_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.reboot_button.setMinimumHeight(35)
-        self.reboot_button.clicked.connect(self.reboot_disk)
-        
         bottom_buttons_layout.addWidget(self.upload_button)
-        bottom_buttons_layout.addWidget(self.reboot_button)
-        
+        # Elimino el botón de reboot disk
+        # main_layout.addWidget(bottom_buttons_container)
         main_layout.addWidget(bottom_buttons_container)
         
         self.update()
@@ -401,24 +394,6 @@ class FileManagerPanel(QFrame):
             }}
             QPushButton:pressed {{
                 background-color: #1e7e34;
-            }}
-        """)
-        
-        self.reboot_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #dc3545;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: {bottom_button_font_size}px;
-                font-weight: bold;
-                font-family: Arial;
-            }}
-            QPushButton:hover {{
-                background-color: #c82333;
-            }}
-            QPushButton:pressed {{
-                background-color: #bd2130;
             }}
         """)
         
