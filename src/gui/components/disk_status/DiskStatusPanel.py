@@ -29,10 +29,10 @@ class DiskStatusPanel(QFrame):
         disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
         statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
         disk_data = [
-            {"status": DiskStatus.ONLINE, "used": "45%", "files": "8", "activity": "1 minute ago"},
-            {"status": DiskStatus.REBUILDING, "used": "68%", "files": "12", "activity": "3 seconds ago"},
-            {"status": DiskStatus.BUSY, "used": "72%", "files": "15", "activity": "Active now"},
-            {"status": DiskStatus.FAILED, "used": "0%", "files": "0", "activity": "System error"}
+            {"status": DiskStatus.ONLINE, "used": "45%", "activity": "1 minute ago"},
+            {"status": DiskStatus.REBUILDING, "used": "68%", "activity": "3 seconds ago"},
+            {"status": DiskStatus.BUSY, "used": "72%", "activity": "Active now"},
+            {"status": DiskStatus.FAILED, "used": "0%", "activity": "System error"}
         ]
         
         # Cylinder visualization section
@@ -58,7 +58,6 @@ class DiskStatusPanel(QFrame):
             info_text = f"<b>{disk_names[i]}</b><br>"
             info_text += f"Status: <b>{statuses[i].name}</b><br>"
             info_text += f"Used Space: {disk_data[i]['used']}<br>"
-            info_text += f"Files: {disk_data[i]['files']}<br>"
             info_text += f"Last activity: {disk_data[i]['activity']}"
             
             info_widget.setText(info_text)
@@ -102,17 +101,13 @@ class DiskStatusPanel(QFrame):
         return min_size
         
     def update_responsive_styling(self):
-        if self.width() < 50 or self.height() < 50:
-            return
+        # Only update info labels and button size, not dropdown or layout
         TITLE_PADDING = 10
         INFO_PADDING = 10
-        # Title styling
         title_container_width = self.width() - 20
         title_text_width = title_container_width - (TITLE_PADDING * 2)
         title_text_height = 50 - (TITLE_PADDING * 2)
-        
         title_font_size = self.calculate_max_font_size("DISK ARRAY STATUS", title_text_width, title_text_height, min_size=6, max_size=32)
-        
         self.title.setFont(QFont("Arial", title_font_size, QFont.Bold))
         self.title.setStyleSheet(f"""
             QLabel {{
@@ -123,21 +118,15 @@ class DiskStatusPanel(QFrame):
                 margin-bottom: {TITLE_PADDING}px;
             }}
         """)
-        
-        # Info labels styling
         available_height = self.height() - 120
         label_container_height = available_height // 4
         label_container_width = (self.width() // 2) - 30
-        
         label_text_width = label_container_width - (INFO_PADDING * 2)
         label_text_height = label_container_height - (INFO_PADDING * 2)
-        
         label_text_width = max(40, label_text_width)
         label_text_height = max(20, label_text_height)
-        
-        sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nFiles: 12\nLast activity: 3 seconds ago"
+        sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nLast activity: 3 seconds ago"
         info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=4, max_size=16)
-        
         for info_label in self.info_labels:
             info_label.setFont(QFont("Arial", info_font_size))
             info_label.setStyleSheet(f"""
@@ -149,31 +138,15 @@ class DiskStatusPanel(QFrame):
                     margin: {INFO_PADDING//2}px;
                 }}
             """)
-        # Responsive adjustment for dropdown and reboot button
-        if hasattr(self, 'disk_selector') and hasattr(self, 'reboot_button'):
-            container_width = self.width() - 80  # 40px padding on each side
-            dropdown_width = int(container_width * 0.45)
-            button_width = int(container_width * 0.45)
-            dropdown_font_size = self.calculate_max_font_size("Disk D1", dropdown_width, 35, min_size=8, max_size=18)
-            reboot_font_size = self.calculate_max_font_size("Reboot Disk", button_width, 35, min_size=10, max_size=22)
-            self.disk_selector.setMinimumWidth(dropdown_width)
-            self.disk_selector.setMaximumWidth(dropdown_width)
-            self.disk_selector.setStyleSheet(f"""
-                QComboBox {{
-                    font-size: {dropdown_font_size}px;
-                    min-height: 32px;
-                    padding: 4px 12px;
-                }}
-            """)
-            self.reboot_button.setMinimumWidth(button_width)
-            self.reboot_button.setMaximumWidth(button_width)
+        # Restore reboot button style (visual only, not size)
+        if hasattr(self, 'reboot_button'):
             self.reboot_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #dc3545;
                     color: white;
                     border: none;
                     border-radius: 6px;
-                    font-size: {reboot_font_size}px;
+                    font-size: 16px;
                     font-weight: bold;
                     font-family: Arial;
                     min-height: 35px;
@@ -185,15 +158,14 @@ class DiskStatusPanel(QFrame):
                     background-color: #bd2130;
                 }}
             """)
-        
-    def update_disk_status(self, disk_index, status, used_space, files_count, last_activity):
+
+    def update_disk_status(self, disk_index, status, used_space, last_activity):
         if 0 <= disk_index < len(self.disks):
             self.disks[disk_index].set_status(status)
             
             info_text = f"<b>Disk D{disk_index + 1}</b><br>"
             info_text += f"Status: <b>{status.name}</b><br>"
             info_text += f"Used Space: {used_space}%<br>"
-            info_text += f"Files: {files_count}<br>"
             info_text += f"Last activity: {last_activity}"
             
             self.info_labels[disk_index].setText(info_text)

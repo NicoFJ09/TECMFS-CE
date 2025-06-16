@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, 
-                             QPushButton, QCheckBox, QWidget, QSizePolicy, QScrollArea)
+                             QPushButton, QCheckBox, QWidget, QSizePolicy)
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QFontMetrics
 import datetime

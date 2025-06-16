@@ -46,9 +46,7 @@ class MainWindow(QMainWindow):
         right_splitter.addWidget(self.log_panel)
         
         # Layout configuration
-        right_splitter.setSizes([400, 200])
         main_splitter.addWidget(right_splitter)
-        main_splitter.setSizes([266, 534])
         
         # Event connections
         main_splitter.splitterMoved.connect(self.update)
