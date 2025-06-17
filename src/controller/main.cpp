@@ -232,23 +232,49 @@ int main() {
 
     // 4) RAID status
     server.Get("/raid-status", [&](const Request& req, Response& res) {
-        int maxBlocks = req.has_param("max")
-                      ? std::stoi(req.get_param_value("max"))
-                      : totalBlocks;
-    
-        json j;
-        for (int disk = 0; disk < numDisks; ++disk) {
+    int maxBlocks = req.has_param("max") ? std::stoi(req.get_param_value("max")) : totalBlocks;
+    json j;
+    std::vector<std::thread> threads;
+    std::mutex mtx;
+
+    for (int disk = 0; disk < numDisks; ++disk) {
+        threads.emplace_back([&, disk] {
             json dj = json::array();
-            Client cli(diskAddrs[disk], diskPorts[disk]);
+            Client cli(diskAddrs[disk].c_str(), diskPorts[disk]);
+
+            cli.set_connection_timeout(0, 200000); // ⏩ 0.2 segundos de conexión
+            cli.set_read_timeout(0, 200000); // ⏩ 0.2 segundos de respuesta
+
+            bool diskIsDown = false;
+
             for (int blk = 0; blk < maxBlocks; ++blk) {
-                auto r = cli.Get("/block?idx=" + std::to_string(blk));
-                dj.push_back((r && r->status == 200) ? "OK" : "MISSING");
+                if (diskIsDown) {
+                    dj.push_back("MISSING");  
+                    continue; // 🚨 Si ya detectamos fallo, no seguimos consultando
+                }
+
+                try {
+                    auto r = cli.Get("/block?idx=" + std::to_string(blk));
+                    if (!r || r->status != 200) {
+                        diskIsDown = true; // ✅ Abortamos consultas en este disco
+                        dj.push_back("MISSING");
+                    } else {
+                        dj.push_back("OK");
+                    }
+                } catch (...) {
+                    diskIsDown = true; // 🚨 Error de conexión, abortar más intentos
+                    dj.push_back("MISSING");
+                }
             }
-            j[std::to_string(disk+1)] = dj;
-        }
-        res.set_content(j.dump(), "application/json");
-    });
-    
+
+            std::lock_guard<std::mutex> lock(mtx);
+            j[std::to_string(disk + 1)] = dj;
+        });
+    }
+
+    for (auto& t : threads) t.join();
+    res.set_content(j.dump(), "application/json");
+});
 
     // 5) Servir interfaz web estática
     server.Get("/", [&](const Request&, Response& res) {

@@ -9,11 +9,15 @@
         ul { list-style-type: none; padding: 0; }
         li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 4px; }
         .error { color: red; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f4f4f4; }
     </style>
 </head>
 <body>
     <h1>TECMedia File System - Controller Node</h1>
     <p>Total de archivos almacenados: <span id="totalArchivos">0</span></p>
+
     <h2>Archivos en el sistema:</h2>
     <ul id="listaArchivos">
         <li>Cargando estado...</li>
@@ -21,33 +25,83 @@
 
     <script>
         function actualizarEstado() {
-            fetch('/status')
+            fetch('/list')
                 .then(response => response.json())
                 .then(data => {
                     let lista = document.getElementById('listaArchivos');
-                    lista.innerHTML = ''; // Limpiar lista previa
+                    
+                    document.getElementById('totalArchivos').textContent = data.length;
 
-                    const archivos = Object.keys(data);
-                    document.getElementById('totalArchivos').textContent = archivos.length;
-
-                    if (archivos.length === 0) {
+                    lista.innerHTML = ''; // Mantener la última versión visible
+                    if (data.length === 0) {
                         lista.innerHTML = '<li>No hay archivos almacenados.</li>';
                     } else {
-                        archivos.forEach(nombre => {
+                        data.forEach(nombre => {
                             const item = document.createElement('li');
-                            item.textContent = `Archivo: ${nombre} | Ruta: ${data[nombre]}`;
+                            item.textContent = `Archivo: ${nombre}`;
                             lista.appendChild(item);
                         });
                     }
                 })
-                .catch(err => {
+                .catch(() => {
                     document.getElementById('listaArchivos').innerHTML = '<li class="error">Error al obtener estado del servidor.</li>';
                     document.getElementById('totalArchivos').textContent = '0';
                 });
         }
 
         actualizarEstado();
-        setInterval(actualizarEstado, 2000); // Actualiza cada 2 segundos
+        setInterval(actualizarEstado, 2000);
     </script>
+
+    <h2>Estado de discos RAID:</h2>
+    <p id="estadoCargando" style="color: blue;">Cargando estado...</p> <!-- 🔹 Mensaje SIEMPRE visible -->
+    <table>
+        <thead>
+            <tr>
+                <th>Disco</th>
+                <th>Bloques</th>
+            </tr>
+        </thead>
+        <tbody id="estadoRAID">
+            <tr><td colspan="2">Cargando estado...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        function actualizarEstadoRAID() {
+            document.getElementById('estadoCargando').textContent = "Actualizando estado..."; // 🔥 Estado dinámico
+
+            fetch('/raid-status?max=10')
+                .then(response => response.json())
+                .then(data => {
+                    let tabla = document.getElementById('estadoRAID');
+                    tabla.innerHTML = '';  // Mantener última versión visible
+
+                    Object.keys(data).forEach(disk => {
+                        let fila = document.createElement('tr');
+                        let celdaDisk = document.createElement('td');
+                        let celdaBloques = document.createElement('td');
+
+                        celdaDisk.textContent = `Disco ${disk}`;
+                        celdaBloques.innerHTML = data[disk].map(status =>
+                            `<span style="color:${status === "MISSING" ? "red" : "green"}">${status}</span>`
+                        ).join(", ");
+
+                        fila.appendChild(celdaDisk);
+                        fila.appendChild(celdaBloques);
+                        tabla.appendChild(fila);
+                    });
+
+                    document.getElementById('estadoCargando').textContent = "Estado actualizado."; // ✅ Mensaje de éxito
+                })
+                .catch(() => {
+                    document.getElementById('estadoCargando').textContent = "Error al obtener estado."; // ❌ Mantener mensaje de error
+                });
+        }
+
+        actualizarEstadoRAID();
+        setInterval(actualizarEstadoRAID, 5000);
+    </script>
+
 </body>
 </html>
