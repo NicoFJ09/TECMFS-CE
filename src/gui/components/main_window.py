@@ -65,9 +65,9 @@ class MainWindow(QMainWindow):
         self.logger = Logger(self.log_panel)
         self.router = MessageRouter(self.disk_monitor, self.file_manager, self.logger)
         # Set button callbacks for debug actions
-        self.disk_panel.set_button_callbacks(self.router)
-        self.filemanager_panel.set_button_callbacks(self.router)
-        self.log_panel.set_button_callbacks(self.router)
+        self.disk_panel.set_button_callbacks()
+        self.filemanager_panel.set_button_callbacks()
+        self.log_panel.set_button_callbacks()
 
         # --- Dummy data injection (simulate server response) ---
         disk_status_data = {

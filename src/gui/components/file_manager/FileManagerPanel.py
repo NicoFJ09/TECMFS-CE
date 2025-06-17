@@ -117,12 +117,6 @@ class FileManagerPanel(QFrame):
         self.file_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.file_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
-        # Initialize sample data for all disks
-        self.populate_files()
-        
-        # Load initial disk data
-        self.load_files()
-        
         main_layout.addWidget(self.file_table, 1)
         
         # Separator before bottom buttons
@@ -149,38 +143,6 @@ class FileManagerPanel(QFrame):
         
         self.update()
         
-    def populate_files(self):
-        """Inicializa archivos de ejemplo en el almacenamiento distribuido"""
-        self.files = [
-            ("system_config.ini", "2 KB"),
-            ("boot.img", "128 MB"),
-            ("kernel.bin", "45 MB"),
-            ("drivers.sys", "15 MB"),
-            ("startup.exe", "3.2 MB"),
-            ("document.pdf", "2.1 MB"),
-            ("presentation.pptx", "12.5 MB"),
-            ("spreadsheet.xlsx", "3.7 MB"),
-            ("report.docx", "1.8 MB"),
-            ("notes.txt", "25 KB"),
-            ("manual.pdf", "8.9 MB"),
-            ("vacation_2023.jpg", "4.2 MB"),
-            ("family_photo.png", "2.8 MB"),
-            ("sunset.raw", "45 MB"),
-            ("wedding_video.mp4", "1.2 GB"),
-            ("music_collection.zip", "89 MB"),
-            ("birthday.mov", "567 MB"),
-            ("backup_db.sql", "234 MB"),
-            ("server_logs.txt", "15 KB"),
-            ("config.json", "3 KB"),
-            ("application.jar", "67 MB"),
-            ("source_code.zip", "12 MB"),
-            ("database.backup", "456 MB"),
-            ("scripts.tar.gz", "8.5 MB")
-        ]
-
-    def load_files(self):
-        self.display_files(self.files)
-
     def display_files(self, files_to_display):
         self.file_table.setRowCount(len(files_to_display))
         for row, (filename, size) in enumerate(files_to_display):
@@ -453,5 +415,5 @@ class FileManagerPanel(QFrame):
         self.files = files
         self.display_files(self.files)
         
-    def set_button_callbacks(self, router):
+    def set_button_callbacks(self):
         self.upload_button.clicked.connect(lambda: print("[ACTION] Would upload file to storage unit"))

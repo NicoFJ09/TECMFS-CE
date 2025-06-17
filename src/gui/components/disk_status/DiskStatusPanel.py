@@ -166,5 +166,5 @@ class DiskStatusPanel(QFrame):
             self.info_labels[disk_index].setText(info_text)
             self.update_responsive_styling()
 
-    def set_button_callbacks(self, router):
+    def set_button_callbacks(self):
         self.reboot_button.clicked.connect(lambda: print(f"[ACTION] Would send reboot command for: {self.disk_selector.currentText()}"))

@@ -9,7 +9,6 @@ class LogPanel(QFrame):
         super().__init__()
         self.log_messages = []
         self.setup_ui()
-        self.start_demo_timer()
         
     def setup_ui(self):
         self.setFrameStyle(QFrame.StyledPanel)
@@ -59,26 +58,8 @@ class LogPanel(QFrame):
         
         main_layout.addWidget(controls_container)
         
-        # Initialize with some sample logs
-        self.add_sample_logs()
-        
         self.update()
         
-    def add_sample_logs(self):
-        """Add some initial sample log messages"""
-        sample_logs = [
-            ("INFO", "System initialized successfully"),
-            ("INFO", "File system mounted on /dev/disk1"),
-            ("WARNING", "Disk D2 showing high usage (68%)"),
-            ("INFO", "User uploaded file: document.pdf"),
-            ("ERROR", "Disk D4 connection failed"),
-            ("INFO", "Auto-rebuild started for Disk D2"),
-            ("SUCCESS", "File transfer completed"),
-        ]
-        
-        for level, message in sample_logs:
-            self.add_log_message(level, message)
-    
     def add_log_message(self, level, message):
         """Add a new log message with timestamp and level"""
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
@@ -110,31 +91,7 @@ class LogPanel(QFrame):
         self.log_messages.clear()
         self.log_display.clear()
         print("Logs cleared")
-    
-    def start_demo_timer(self):
-        """Start a timer to add demo log messages periodically"""
-        self.demo_timer = QTimer()
-        self.demo_timer.timeout.connect(self.add_demo_log)
-        self.demo_timer.start(3000)  # Add new log every 3 seconds
-        
-        self.demo_messages = [
-            ("INFO", "Periodic system check completed"),
-            ("INFO", "Disk synchronization in progress"),
-            ("WARNING", "High CPU usage detected"),
-            ("INFO", "Backup process started"),
-            ("SUCCESS", "All systems operating normally"),
-            ("INFO", "User session activity detected"),
-            ("INFO", "Cache cleanup completed"),
-        ]
-        self.demo_index = 0
-    
-    def add_demo_log(self):
-        """Add a demo log message for demonstration"""
-        if self.demo_messages:
-            level, message = self.demo_messages[self.demo_index]
-            self.add_log_message(level, message)
-            self.demo_index = (self.demo_index + 1) % len(self.demo_messages)
-    
+
     def update(self):
         self.update_responsive_styling()
         
@@ -196,5 +153,5 @@ class LogPanel(QFrame):
         super().resizeEvent(event)
         self.update()
         
-    def set_button_callbacks(self, router):
+    def set_button_callbacks(self):
         self.clear_button.clicked.connect(lambda: print("[ACTION] Would clear all logs"))
