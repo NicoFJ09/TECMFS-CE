@@ -448,3 +448,10 @@ class FileManagerPanel(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update()
+        
+    def set_files(self, files):
+        self.files = files
+        self.display_files(self.files)
+        
+    def set_button_callbacks(self, router):
+        self.upload_button.clicked.connect(lambda: print("[ACTION] Would upload file to storage unit"))

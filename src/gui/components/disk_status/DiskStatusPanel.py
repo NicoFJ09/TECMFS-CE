@@ -28,19 +28,13 @@ class DiskStatusPanel(QFrame):
         self.info_labels = []
         disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
         statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
-        disk_data = [
-            {"status": DiskStatus.ONLINE, "used": "45%", "activity": "1 minute ago"},
-            {"status": DiskStatus.REBUILDING, "used": "68%", "activity": "3 seconds ago"},
-            {"status": DiskStatus.BUSY, "used": "72%", "activity": "Active now"},
-            {"status": DiskStatus.FAILED, "used": "0%", "activity": "System error"}
-        ]
         
         # Cylinder visualization section
         cylinders_layout = QVBoxLayout()
         cylinders_layout.setSpacing(8)
         for i in range(4):
             cylinder = CylinderWidget()
-            cylinder.set_status(statuses[i])
+            cylinder.set_status(statuses[i])  # Default status, can be updated by system
             cylinder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             self.disks.append(cylinder)
             cylinders_layout.addWidget(cylinder)
@@ -55,10 +49,11 @@ class DiskStatusPanel(QFrame):
             info_widget.setWordWrap(True)
             info_widget.setAutoFillBackground(True)
             
+            # Set empty/default info, will be updated by system
             info_text = f"<b>{disk_names[i]}</b><br>"
             info_text += f"Status: <b>{statuses[i].name}</b><br>"
-            info_text += f"Used Space: {disk_data[i]['used']}<br>"
-            info_text += f"Last activity: {disk_data[i]['activity']}"
+            info_text += f"Used Space: -<br>"
+            info_text += f"Last activity: -"
             
             info_widget.setText(info_text)
             self.info_labels.append(info_widget)
@@ -165,8 +160,11 @@ class DiskStatusPanel(QFrame):
             
             info_text = f"<b>Disk D{disk_index + 1}</b><br>"
             info_text += f"Status: <b>{status.name}</b><br>"
-            info_text += f"Used Space: {used_space}%<br>"
+            info_text += f"Used Space: {used_space}<br>"
             info_text += f"Last activity: {last_activity}"
             
             self.info_labels[disk_index].setText(info_text)
             self.update_responsive_styling()
+
+    def set_button_callbacks(self, router):
+        self.reboot_button.clicked.connect(lambda: print(f"[ACTION] Would send reboot command for: {self.disk_selector.currentText()}"))

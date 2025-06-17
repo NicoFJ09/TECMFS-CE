@@ -195,3 +195,6 @@ class LogPanel(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update()
+        
+    def set_button_callbacks(self, router):
+        self.clear_button.clicked.connect(lambda: print("[ACTION] Would clear all logs"))
