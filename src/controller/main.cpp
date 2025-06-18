@@ -331,13 +331,6 @@ int main() {
                     {{"name", "boot.img"}, {"size", "128 MB"}},
                     {{"name", "kernel.bin"}, {"size", "45 MB"}}
                 }}
-            }},
-            {"logs", {
-                {"tag", "log"},
-                {"logs", {
-                    {{"level", "INFO"}, {"message", "System initialized successfully"}},
-                    {{"level", "WARNING"}, {"message", "Disk D2 showing high usage (68%)"}}
-                }}
             }}
         };
         res.set_content(response.dump(), "application/json");

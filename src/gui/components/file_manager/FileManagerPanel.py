@@ -5,11 +5,16 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QPalette
 import platform
 import importlib
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from client.action_manager import ActionManager
 
 class FileManagerPanel(QFrame):
     def __init__(self):
         super().__init__()
         self.files = []  # Lista única de archivos
+        self.action_manager: Optional['ActionManager'] = None  # Will be set by MainWindow
         self.setup_ui()
         
     def is_dark_mode(self):
@@ -192,17 +197,25 @@ class FileManagerPanel(QFrame):
         # Display the filtered results
         self.display_files(matching_files)
         
-        # Show feedback in console
-        if matching_files:
-            print(f"Found {len(matching_files)} file(s) matching '{search_term}'")
-        else:
-            print(f"No files found matching '{search_term}'")
+        # Optional: Log search results via ActionManager (but not as user action)
+        if search_term.strip() and self.action_manager and len(matching_files) > 0:
+            self.action_manager.log_system_event("SEARCH_RESULT", f"Found {len(matching_files)} files matching '{search_term}'")
 
     def delete_file(self, row):
         """Handle file deletion from current disk"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Deleting file: {filename}")
+            
+            # DEBUG: Verificar que action_manager esté disponible
+            print(f"[DEBUG] delete_file called for: {filename}")
+            print(f"[DEBUG] action_manager is: {self.action_manager}")
+            
+            # SOLO usar ActionManager - NO prints a consola
+            if self.action_manager:
+                print(f"[DEBUG] Calling action_manager.delete_file({filename})")
+                self.action_manager.delete_file(filename)
+            else:
+                print(f"[DEBUG] action_manager is None!")
             
             # Remove from current disk's file list
             self.files = [(f, s) for f, s in self.files if f != filename]
@@ -214,10 +227,25 @@ class FileManagerPanel(QFrame):
         """Handle file download"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Downloading file: {filename}")
+            
+            # DEBUG: Verificar que action_manager esté disponible
+            print(f"[DEBUG] download_file called for: {filename}")
+            print(f"[DEBUG] action_manager is: {self.action_manager}")
+            
+            # SOLO usar ActionManager - NO prints a consola
+            if self.action_manager:
+                print(f"[DEBUG] Calling action_manager.download_file({filename})")
+                self.action_manager.download_file(filename)
+            else:
+                print(f"[DEBUG] action_manager is None!")
 
     def upload_file(self):
-        """Handle file upload - opens file dialog and prints absolute path"""
+        """Handle file upload"""
+        # SOLO usar ActionManager - NO prints a consola
+        if self.action_manager:
+            self.action_manager.upload_file()
+            
+        # Abrir dialog de archivo
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select file to upload",
@@ -225,15 +253,16 @@ class FileManagerPanel(QFrame):
             "All Files (*)"
         )
         
-        if file_path:
-            print(f"Selected file for upload: {file_path}")
-            # Here you would normally handle the file upload to the current disk
-            # For now, we just print the absolute path
+        if file_path and self.action_manager:
+            # Log the actual file selected
+            self.action_manager.upload_file(file_path)
     
     def reboot_disk(self):
         """Handle disk reboot"""
-        print(f"Rebooting storage unit...")
-        # Here you would normally handle the actual disk reboot functionality
+        # Esta función no debería estar aquí - el reboot se maneja en DiskStatusPanel
+        # Pero si se llama, usar ActionManager
+        if self.action_manager:
+            self.action_manager.log_system_event("DEPRECATED", "reboot_disk called from FileManagerPanel")
         
     def update(self):
         self.update_responsive_styling()
@@ -414,6 +443,3 @@ class FileManagerPanel(QFrame):
     def set_files(self, files):
         self.files = files
         self.display_files(self.files)
-        
-    def set_button_callbacks(self):
-        self.upload_button.clicked.connect(lambda: print("[ACTION] Would upload file to storage unit"))
