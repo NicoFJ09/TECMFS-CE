@@ -4,104 +4,163 @@
     <meta charset="UTF-8">
     <title>TECMFS - Estado RAID</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        ul { list-style-type: none; padding: 0; }
-        li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 4px; }
-        .error { color: red; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f4f4f4; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #0A192F; 
+            color: #FFFFFF; 
+            margin: 0; 
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        table { 
+            width: 80%; 
+            border-collapse: collapse; 
+            margin: auto; 
+            background: #1E2A38; 
+            text-align: center;
+        }
+
+        th, td { 
+            border: 1px solid #3E5C76; 
+            padding: 8px; 
+            text-align: center; 
+            color: #FFFFFF; 
+        }
+        
+        th { background-color: #3E5C76; }
     </style>
 </head>
 <body>
-    <h1>TECMedia File System - Controller Node</h1>
-    <p>Total de archivos almacenados: <span id="totalArchivos">0</span></p>
 
-    <h2>Archivos en el sistema:</h2>
-    <ul id="listaArchivos">
-        <li>Cargando estado...</li>
-    </ul>
-
-    <script>
-        function actualizarEstado() {
-            fetch('/list')
-                .then(response => response.json())
-                .then(data => {
-                    let lista = document.getElementById('listaArchivos');
-                    
-                    document.getElementById('totalArchivos').textContent = data.length;
-
-                    lista.innerHTML = ''; // Mantener la última versión visible
-                    if (data.length === 0) {
-                        lista.innerHTML = '<li>No hay archivos almacenados.</li>';
-                    } else {
-                        data.forEach(nombre => {
-                            const item = document.createElement('li');
-                            item.textContent = `Archivo: ${nombre}`;
-                            lista.appendChild(item);
-                        });
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('listaArchivos').innerHTML = '<li class="error">Error al obtener estado del servidor.</li>';
-                    document.getElementById('totalArchivos').textContent = '0';
-                });
-        }
-
-        actualizarEstado();
-        setInterval(actualizarEstado, 2000);
-    </script>
-
-    <h2>Estado de discos RAID:</h2>
-    <p id="estadoCargando" style="color: blue;">Cargando estado...</p> <!-- 🔹 Mensaje SIEMPRE visible -->
-    <table>
+    <!--Primero, la lista de archivos-->
+    <h2>Archivos almacenados en RAID:</h2>
+    <p id="estadoArchivos" style="color: #FFD700;">Cargando archivos...</p>
+    <table id="tablaArchivos" style="display: none;">
         <thead>
             <tr>
-                <th>Disco</th>
-                <th>Bloques</th>
+                <th>Nombre del Archivo</th>
             </tr>
         </thead>
-        <tbody id="estadoRAID">
-            <tr><td colspan="2">Cargando estado...</td></tr>
-        </tbody>
+        <tbody id="listaArchivos"></tbody>
+    </table>
+
+    <!--Luego, el estado RAID-->
+    <h2>Estado de discos RAID:</h2>
+    <p id="estadoCargando" style="color: #FFD700; display: block;">Cargando estado...</p>
+    <table id="tablaRAID" style="display: none;">
+        <thead>
+            <tr>
+                <th>Bloque</th>
+                <th>Disco 1</th>
+                <th>Disco 2</th>
+                <th>Disco 3</th>
+                <th>Disco 4</th>
+            </tr>
+        </thead>
+        <tbody id="estadoRAID"></tbody>
     </table>
 
     <script>
-        function actualizarEstadoRAID() {
-            document.getElementById('estadoCargando').textContent = "Actualizando estado..."; // 🔥 Estado dinámico
+        let cantidadCargada = localStorage.getItem('cantidadCargada') ? parseInt(localStorage.getItem('cantidadCargada')) : 20;
+        const incremento = 10;
 
-            fetch('/raid-status?max=10')
+        function cargarArchivos() {
+            document.getElementById('estadoArchivos').textContent = "Cargando archivos...";
+            
+            fetch(`/list`)
                 .then(response => response.json())
-                .then(data => {
-                    let tabla = document.getElementById('estadoRAID');
-                    tabla.innerHTML = '';  // Mantener última versión visible
-
-                    Object.keys(data).forEach(disk => {
-                        let fila = document.createElement('tr');
-                        let celdaDisk = document.createElement('td');
-                        let celdaBloques = document.createElement('td');
-
-                        celdaDisk.textContent = `Disco ${disk}`;
-                        celdaBloques.innerHTML = data[disk].map(status =>
-                            `<span style="color:${status === "MISSING" ? "red" : "green"}">${status}</span>`
-                        ).join(", ");
-
-                        fila.appendChild(celdaDisk);
-                        fila.appendChild(celdaBloques);
-                        tabla.appendChild(fila);
-                    });
-
-                    document.getElementById('estadoCargando').textContent = "Estado actualizado."; // ✅ Mensaje de éxito
+                .then(archivos => {
+                    let tabla = document.getElementById("tablaArchivos");
+                    let tbody = document.getElementById("listaArchivos");
+                
+                    tbody.innerHTML = '';
+                
+                    if (archivos.length > 0) {
+                        document.getElementById('estadoArchivos').style.display = "none";
+                        tabla.style.display = "table";
+                    
+                        archivos.forEach(nombreArchivo => {
+                            let fila = document.createElement('tr');
+                            let celdaNombre = document.createElement('td');
+                            celdaNombre.textContent = nombreArchivo;
+                            fila.appendChild(celdaNombre);
+                            tbody.appendChild(fila);
+                        });
+                    } else {
+                        document.getElementById('estadoArchivos').textContent = "🚫 Sin archivos almacenados en el RAID.";
+                        tabla.style.display = "none"; //La tabla desaparece cuando está vacía
+                    }
                 })
                 .catch(() => {
-                    document.getElementById('estadoCargando').textContent = "Error al obtener estado."; // ❌ Mantener mensaje de error
+                    document.getElementById('estadoArchivos').textContent = "❌ Error al obtener los archivos.";
+                    document.getElementById("tablaArchivos").style.display = "none"; //Oculta la tabla en caso de error
                 });
         }
+        function cargarEstadoRAID() {
+        document.getElementById('estadoCargando').textContent = "Actualizando estado...";
+            
+        fetch(`/raid-status?max=${cantidadCargada}`, { cache: "no-store" })
+            .then(response => response.json())
+            .then(data => {
+                let tabla = document.getElementById("tablaRAID");
+                let tbody = document.getElementById('estadoRAID');
+            
+                tbody.innerHTML = ''; 
+                let tieneBloquesOK = false;
+            
+                for (let blk = 0; blk < cantidadCargada; blk++) {
+                    let fila = document.createElement('tr');
+                    let celdaBloque = document.createElement('td');
+                    celdaBloque.textContent = `Bloque ${blk}`;
+                    fila.appendChild(celdaBloque);
+                
+                    for (let disk = 1; disk <= 4; disk++) {
+                        let celdaEstado = document.createElement('td');
+                        let estado = (data[disk] && data[disk][blk] !== undefined) ? data[disk][blk] : "MISSING";
+                    
+                        if (estado === "OK") tieneBloquesOK = true;
+                    
+                        celdaEstado.innerHTML = `<span style="color:${estado === "MISSING" ? "#FF6B6B" : "#00FF7F"}">${estado}</span>`;
+                        fila.appendChild(celdaEstado);
+                    }
+                
+                    tbody.appendChild(fila);
+                }
+            
+                if (tieneBloquesOK) {
+                    document.getElementById('estadoCargando').style.display = "none";
+                    tabla.style.display = "table";
+                } else {
+                    document.getElementById('estadoCargando').textContent = "⚠️ No se encontraron bloques en los discos.";
+                }
+            })
+            .catch(() => {
+                document.getElementById('estadoCargando').textContent = "❌ Error al obtener el estado de los discos.";
+            });
+    }
 
-        actualizarEstadoRAID();
-        setInterval(actualizarEstadoRAID, 5000);
+        cargarArchivos();
+        cargarEstadoRAID();
+
+        setInterval(() => {
+            cargarArchivos();
+            cargarEstadoRAID();
+        }, 5000); //Actualización automática cada 5s
+
+        window.addEventListener('scroll', () => {
+            const alturaTotal = document.documentElement.scrollHeight;
+            const alturaActual = window.innerHeight + window.scrollY;
+
+            if (alturaActual >= alturaTotal - 50) {
+                cantidadCargada += incremento;
+                localStorage.setItem('cantidadCargada', cantidadCargada);
+                cargarEstadoRAID();
+            }
+        });
     </script>
-
 </body>
 </html>
