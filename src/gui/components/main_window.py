@@ -10,7 +10,7 @@ from systems.Logger import Logger
 from systems.MessageRouter import MessageRouter
 from client.server_service import ServerService
 from client.action_manager import ActionManager
-from config import GUI_CONFIG, SERVER_CONFIG, DEFAULT_MESSAGES
+from config import GUI_CONFIG, SERVER_CONFIG
 
 class MainWindow(QMainWindow):
     def __init__(self):
