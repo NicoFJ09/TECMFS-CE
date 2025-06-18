@@ -312,6 +312,37 @@ int main() {
         res.set_content(j.dump(), "application/json");
     });
 
+    // 8) Endpoint para datos de GUI (formato exacto que espera la GUI)
+    server.Get("/gui-data", [&](const Request& /*req*/, Response& res) {
+        json response = {
+            {"disk_status", {
+                {"tag", "disk_status"},
+                {"disks", {
+                    {{"name", "Disk D1"}, {"status", "ONLINE"}, {"used", "45%"}, {"activity", "1 minute ago"}},
+                    {{"name", "Disk D2"}, {"status", "REBUILDING"}, {"used", "68%"}, {"activity", "3 seconds ago"}},
+                    {{"name", "Disk D3"}, {"status", "BUSY"}, {"used", "72%"}, {"activity", "Active now"}},
+                    {{"name", "Disk D4"}, {"status", "FAILED"}, {"used", "0%"}, {"activity", "System error"}}
+                }}
+            }},
+            {"file_manager", {
+                {"tag", "file_manager"},
+                {"files", {
+                    {{"name", "system_config.ini"}, {"size", "2 KB"}},
+                    {{"name", "boot.img"}, {"size", "128 MB"}},
+                    {{"name", "kernel.bin"}, {"size", "45 MB"}}
+                }}
+            }},
+            {"logs", {
+                {"tag", "log"},
+                {"logs", {
+                    {{"level", "INFO"}, {"message", "System initialized successfully"}},
+                    {{"level", "WARNING"}, {"message", "Disk D2 showing high usage (68%)"}}
+                }}
+            }}
+        };
+        res.set_content(response.dump(), "application/json");
+    });
+
 
     std::cout << "Controller escuchando en puerto 8080..." << std::endl;
     server.listen("0.0.0.0", 8080);

@@ -8,6 +8,7 @@ from systems.DiskMonitor import DiskMonitor
 from systems.FileManager import FileManager
 from systems.Logger import Logger
 from systems.MessageRouter import MessageRouter
+from client.port_handler import PortHandler
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -64,12 +65,18 @@ class MainWindow(QMainWindow):
         self.file_manager = FileManager(self.filemanager_panel)
         self.logger = Logger(self.log_panel)
         self.router = MessageRouter(self.disk_monitor, self.file_manager, self.logger)
+        
+        # Inicializar comunicación con servidor
+        self.port_handler = PortHandler()
+        self.port_handler.data_received.connect(self.router.route_message)
+        
         # Set button callbacks for debug actions
         self.disk_panel.set_button_callbacks()
         self.filemanager_panel.set_button_callbacks()
         self.log_panel.set_button_callbacks()
 
-        # --- Dummy data injection (simulate server response) ---
+        # Iniciar comunicación con servidor
+        self.port_handler.start_polling(interval=5)  # Cada 5 segundos
         disk_status_data = {
             "tag": "disk_status",
             "disks": [
@@ -94,9 +101,25 @@ class MainWindow(QMainWindow):
                 {"level": "WARNING", "message": "Disk D2 showing high usage (68%)"}
             ]
         }
-        self.router.route_message(disk_status_data)
-        self.router.route_message(file_manager_data)
-        self.router.route_message(log_data)
+        # Iniciar comunicación con servidor
+        self.port_handler.start_polling(interval=5)  # Cada 5 segundos
+        
+        # Conectar botón de test (opcional)
+        if hasattr(self.disk_panel, 'reboot_button'):
+            self.disk_panel.reboot_button.clicked.disconnect()
+            self.disk_panel.reboot_button.clicked.connect(self.test_server_communication)
+        
+    def test_server_communication(self):
+        """Método de prueba para enviar mensaje al servidor"""
+        selected_disk = self.disk_panel.disk_selector.currentText()
+        message = f"Test message from GUI: Reboot {selected_disk}"
+        self.port_handler.send_message(message)
+        
+    def closeEvent(self, event):
+        """Limpiar recursos al cerrar"""
+        if hasattr(self, 'port_handler'):
+            self.port_handler.stop_polling()
+        event.accept()
         
     def resizeEvent(self, event):
         super().resizeEvent(event)
