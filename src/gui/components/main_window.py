@@ -18,7 +18,7 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         
     def setup_ui(self):
-        # Window configuration usando config
+        # Window configuration from config
         screen = QApplication.desktop().screenGeometry()
         self.setWindowTitle(GUI_CONFIG["window_title"])
         self.setGeometry(100, 100, screen.width()//2, screen.height()//2)
@@ -68,33 +68,33 @@ class MainWindow(QMainWindow):
         self.logger = Logger(self.log_panel)
         self.router = MessageRouter(self.disk_monitor, self.file_manager, self.logger)
         
-        # Inicializar servicios usando config
+        # Initialize services from config
         self.server_service = ServerService(
             server_host=SERVER_CONFIG["host"], 
             server_port=SERVER_CONFIG["port"]
         )
         self.action_manager = ActionManager(self.server_service)
         
-        # Conectar ActionManager a los paneles
+        # Connect ActionManager to panels
         self.filemanager_panel.action_manager = self.action_manager
         
-        # Conectar servicios con el sistema de routing
+        # Connect services to routing system
         self.server_service.data_received.connect(self.router.route_message)
         self.server_service.connection_status_changed.connect(self.on_connection_status_changed)
         self.server_service.error_occurred.connect(self.on_log_message)
         self.action_manager.action_logged.connect(self.on_log_message)
         
-        # Configurar callbacks de botones
+        # Configure button callbacks
         self.setup_button_callbacks()
         
-        # Iniciar monitoreo del servidor usando config
+        # Start server monitoring using config
         self.server_service.start_monitoring(interval=SERVER_CONFIG["polling_interval"])
         
-        # Log de inicio de la aplicación
+        # Application startup log
         self.action_manager.app_started()
         
     def setup_button_callbacks(self):
-        """Configura todos los callbacks de botones para usar ActionManager"""
+        """Sets up all button callbacks to use ActionManager"""
         
         # === DISK PANEL CALLBACKS ===
         if hasattr(self.disk_panel, 'reboot_button'):
@@ -133,49 +133,50 @@ class MainWindow(QMainWindow):
             except:
                 pass
             self.log_panel.clear_button.clicked.connect(self.on_clear_logs_clicked)
-             # Log que se configuraron los callbacks
+        
+        # Log that callbacks were configured
         self.action_manager.log_system_event("INITIALIZATION", "All button callbacks configured")
         
     # === DISK PANEL HANDLERS ===
     def on_reboot_disk_clicked(self):
-        """Maneja click del botón reboot"""
+        """Handles click on the reboot button"""
         selected_disk = self.disk_panel.disk_selector.currentText()
         self.action_manager.reboot_disk(selected_disk)
         
     def on_disk_selected(self, disk_name):
-        """Maneja selección de disco"""
+        """Handles disk selection"""
         self.action_manager.select_disk(disk_name)
         
     # === FILE MANAGER HANDLERS ===
     def on_search_files_clicked(self):
-        """Maneja click del botón buscar"""
+        """Handles click on the search button"""
         search_term = self.filemanager_panel.search_input.text()
         self.action_manager.search_files(search_term)
         
     def on_search_text_changed(self, text):
-        """Maneja cambio en el texto de búsqueda - NO se loggea como acción"""
-        # Solo actualizar la búsqueda, sin loggear cada tecleo
+        """Handles change in search text - NOT logged as action"""
+        # Only update the search, don't log every keystroke
         pass
             
     # === LOG PANEL HANDLERS ===
     def on_clear_logs_clicked(self):
-        """Maneja click del botón limpiar logs"""
-        # Log la acción de usuario
+        """Handles click on the clear logs button"""
+        # Log the user action
         self.action_manager.clear_logs()
-        # Ejecutar la acción real en el LogPanel
+        # Perform the actual action in the LogPanel
         self.log_panel.clear_logs()
         
     # === SYSTEM HANDLERS ===
     def on_connection_status_changed(self, is_connected):
-        """Maneja cambios en el estado de conexión"""
+        """Handles connection status changes"""
         status = "CONNECTED" if is_connected else "DISCONNECTED"
         title = f"{GUI_CONFIG['window_title']} - {status}"
         self.setWindowTitle(title)
         
-        # El logging de conexión se maneja en server_service
+        # Connection logging is handled in server_service
         
     def on_log_message(self, level, message):
-        """Maneja mensajes de log del sistema"""
+        """Handles system log messages"""
         print(f"[DEBUG] MainWindow.on_log_message called with: level='{level}', message='{message}'")
         log_data = {
             "tag": "log",
@@ -185,7 +186,7 @@ class MainWindow(QMainWindow):
         self.router.route_message(log_data)
         
     def closeEvent(self, event):
-        """Limpiar recursos al cerrar"""
+        """Clean up resources on close"""
         if hasattr(self, 'action_manager'):
             self.action_manager.app_shutdown()
         if hasattr(self, 'server_service'):

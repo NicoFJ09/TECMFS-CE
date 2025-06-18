@@ -6,9 +6,9 @@ import time
 from PyQt5.QtCore import QObject, pyqtSignal
 
 class PortHandler(QObject):
-    """Manejo simple de comunicación HTTP con el servidor"""
+    """Simple HTTP communication handler with the server"""
     
-    # Señal para enviar datos a la GUI
+    # Signal to send data to the GUI
     data_received = pyqtSignal(dict)
     
     def __init__(self, server_host="localhost", server_port=8080):
@@ -17,46 +17,46 @@ class PortHandler(QObject):
         self.polling_active = False
         
     def start_polling(self, interval=3):
-        """Inicia polling al servidor cada X segundos"""
+        """Start polling the server every X seconds"""
         self.polling_active = True
         thread = threading.Thread(target=self._poll_server, args=(interval,))
         thread.daemon = True
         thread.start()
         
     def stop_polling(self):
-        """Detiene el polling"""
+        """Stop polling"""
         self.polling_active = False
         
     def _poll_server(self, interval):
-        """Hilo que hace polling al servidor"""
+        """Thread that polls the server"""
         while self.polling_active:
             try:
-                # Intentar hacer ping al servidor
+                # Try to ping the server
                 response = self._make_request("/ping")
                 if response:
-                    # Si el servidor responde, solicitar datos
+                    # If the server responds, request data
                     self._fetch_data()
             except:
-                pass  # Ignorar errores silenciosamente
+                pass  # Silently ignore errors
             time.sleep(interval)
             
     def _fetch_data(self):
-        """Obtiene datos del servidor y los envía a la GUI"""
+        """Fetch data from the server and send it to the GUI"""
         try:
-            # Intentar obtener datos reales del servidor
+            # Try to get actual data from the server
             server_data = self._make_request("/gui-data")
             
             if server_data:
-                # Enviar datos reales del servidor
+                # Send actual server data
                 self.data_received.emit(server_data.get("disk_status", {}))
                 self.data_received.emit(server_data.get("file_manager", {}))
                 self.data_received.emit(server_data.get("logs", {}))
             else:
-                # Si no hay respuesta del servidor, usar datos de fallback
+                # If no response, use fallback data
                 self._send_fallback_data()
                 
         except Exception as e:
-            # En caso de error, enviar log de error y datos de fallback
+            # On error, send error log and fallback data
             error_log = {
                 "tag": "log",
                 "logs": [{"level": "ERROR", "message": f"Server error: {str(e)} - Using fallback data"}]
@@ -65,8 +65,8 @@ class PortHandler(QObject):
             self._send_fallback_data()
             
     def _send_fallback_data(self):
-        """Envía datos hardcodeados cuando el servidor no responde"""
-        # Simular respuesta del servidor (igual a tus datos hardcodeados)
+        """Send hardcoded data when the server is unavailable"""
+        # Simulate server response (same as your hardcoded data)
         disk_data = {
             "tag": "disk_status",
             "disks": [
@@ -91,13 +91,13 @@ class PortHandler(QObject):
             "logs": [{"level": "WARNING", "message": "Using offline data - Server not available"}]
         }
         
-        # Enviar datos a la GUI
+        # Send data to the GUI
         self.data_received.emit(disk_data)
         self.data_received.emit(file_data)
         self.data_received.emit(log_data)
     
     def _make_request(self, endpoint):
-        """Hacer request HTTP simple al servidor"""
+        """Perform a simple HTTP request to the server"""
         try:
             url = f"{self.base_url}{endpoint}"
             response = urllib.request.urlopen(url, timeout=2)
@@ -107,9 +107,9 @@ class PortHandler(QObject):
             return None
             
     def send_message(self, message):
-        """Enviar mensaje simple al servidor"""
+        """Send a simple message to the server"""
         try:
-            # Por ahora solo hacer ping y loggear el mensaje
+            # For now, just ping and log the message
             response = self._make_request("/ping")
             if response:
                 log_data = {

@@ -12,13 +12,13 @@ def main():
     window = MainWindow()
     window.show()
     
-    # Log de inicio usando config - Solo console, el log interno se maneja en MainWindow
+    # Startup log using config - Console only, internal log is handled in MainWindow
     print(f"[STARTUP] {DEFAULT_MESSAGES['startup']}")
     
-    # Create update timer for responsive updates usando config
+    # Create update timer for responsive updates using config
     update_timer = QTimer()
     update_timer.timeout.connect(window.update)  # Call window's update method
-    update_timer.start(GUI_CONFIG["update_interval"])  # Update interval desde config
+    update_timer.start(GUI_CONFIG["update_interval"])  # Update interval from config
     
     # Main event loop
     try:

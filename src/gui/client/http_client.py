@@ -1,24 +1,23 @@
 """
-Cliente HTTP modular para TECMFS-CE
-Responsabilidades separadas por módulo
+Modular HTTP client for TECMFS-CE
+Responsibilities are separated by module
 """
 import urllib.request
 import urllib.parse
 import json
-from PyQt5.QtCore import QObject, pyqtSignal
 from config import SERVER_CONFIG
 
 
 class HTTPClient:
-    """Cliente HTTP básico sin lógica de negocio"""
+    """Basic HTTP client without business logic"""
     
     def __init__(self, base_url, timeout=None):
         self.base_url = base_url
-        # Usar timeout de config si no se especifica
+        # Use config timeout if not specified
         self.timeout = timeout or SERVER_CONFIG["timeout"]
     
     def get(self, endpoint, params=None):
-        """GET request básico"""
+        """Basic GET request"""
         try:
             url = f"{self.base_url}{endpoint}"
             if params:
@@ -32,7 +31,7 @@ class HTTPClient:
             return None
     
     def post(self, endpoint, data=None, params=None):
-        """POST request básico"""
+        """Basic POST request"""
         try:
             url = f"{self.base_url}{endpoint}"
             if params:
@@ -49,7 +48,7 @@ class HTTPClient:
             return None
     
     def delete(self, endpoint, params=None):
-        """DELETE request básico"""
+        """Basic DELETE request"""
         try:
             url = f"{self.base_url}{endpoint}"
             if params:

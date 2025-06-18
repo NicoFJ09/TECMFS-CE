@@ -1,5 +1,3 @@
-# file_manager.py
-
 class FileManager:
     def __init__(self, panel):
         self.panel = panel

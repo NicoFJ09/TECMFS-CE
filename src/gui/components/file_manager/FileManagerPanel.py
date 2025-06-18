@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class FileManagerPanel(QFrame):
     def __init__(self):
         super().__init__()
-        self.files = []  # Lista única de archivos
+        self.files = []  # Single file list
         self.action_manager: Optional['ActionManager'] = None  # Will be set by MainWindow
         self.setup_ui()
         
@@ -73,13 +73,13 @@ class FileManagerPanel(QFrame):
         
         # Search input
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Nombre de archivo...")
+        self.search_input.setPlaceholderText("File name...")
         self.search_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         # Connect Enter key to search
         self.search_input.returnPressed.connect(self.search_files)
         
         # Search button
-        self.search_button = QPushButton("Buscar")
+        self.search_button = QPushButton("Search")
         self.search_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.search_button.clicked.connect(self.search_files)
         
@@ -142,8 +142,7 @@ class FileManagerPanel(QFrame):
         self.upload_button.setMinimumHeight(35)
         self.upload_button.clicked.connect(self.upload_file)
         bottom_buttons_layout.addWidget(self.upload_button)
-        # Elimino el botón de reboot disk
-        # main_layout.addWidget(bottom_buttons_container)
+        
         main_layout.addWidget(bottom_buttons_container)
         
         self.update()
@@ -206,11 +205,10 @@ class FileManagerPanel(QFrame):
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
             
-            # DEBUG: Verificar que action_manager esté disponible
+            # DEBUG: Check if action_manager is available
             print(f"[DEBUG] delete_file called for: {filename}")
             print(f"[DEBUG] action_manager is: {self.action_manager}")
             
-            # SOLO usar ActionManager - NO prints a consola
             if self.action_manager:
                 print(f"[DEBUG] Calling action_manager.delete_file({filename})")
                 self.action_manager.delete_file(filename)
@@ -228,11 +226,10 @@ class FileManagerPanel(QFrame):
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
             
-            # DEBUG: Verificar que action_manager esté disponible
+            # DEBUG: Check if action_manager is available
             print(f"[DEBUG] download_file called for: {filename}")
             print(f"[DEBUG] action_manager is: {self.action_manager}")
             
-            # SOLO usar ActionManager - NO prints a consola
             if self.action_manager:
                 print(f"[DEBUG] Calling action_manager.download_file({filename})")
                 self.action_manager.download_file(filename)
@@ -241,11 +238,10 @@ class FileManagerPanel(QFrame):
 
     def upload_file(self):
         """Handle file upload"""
-        # SOLO usar ActionManager - NO prints a consola
         if self.action_manager:
             self.action_manager.upload_file()
             
-        # Abrir dialog de archivo
+        # Open file dialog
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select file to upload",
@@ -259,8 +255,6 @@ class FileManagerPanel(QFrame):
     
     def reboot_disk(self):
         """Handle disk reboot"""
-        # Esta función no debería estar aquí - el reboot se maneja en DiskStatusPanel
-        # Pero si se llama, usar ActionManager
         if self.action_manager:
             self.action_manager.log_system_event("DEPRECATED", "reboot_disk called from FileManagerPanel")
         
@@ -326,7 +320,7 @@ class FileManagerPanel(QFrame):
         
         # Font sizes
         input_font_size = self.calculate_max_font_size("Aa", 200, 27, min_size=8, max_size=14)
-        button_font_size = self.calculate_max_font_size("Buscar", 80, 27, min_size=6, max_size=12)
+        button_font_size = self.calculate_max_font_size("Search", 80, 27, min_size=6, max_size=12)
         
         # Apply styling to controls
         self.search_input.setMinimumWidth(search_width)
