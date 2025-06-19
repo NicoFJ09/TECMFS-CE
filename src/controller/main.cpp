@@ -23,6 +23,85 @@ std::map<std::string, std::vector<std::pair<int,int>>> fileMap;
 // Tamaño original de cada archivo
 std::map<std::string, size_t> fileSizeMap;
 
+enum DiskState { ONLINE, BUSY, REBUILDING, FAILED };
+struct DiskInfo {
+    DiskState status = ONLINE;
+    std::chrono::system_clock::time_point last_change = std::chrono::system_clock::now();
+    std::string last_activity = "Idle";
+};
+
+std::vector<DiskInfo> disks(numDisks); // numDisks = 4
+std::mutex disk_mutex;
+
+// Verifica si un disco está encendido (responde en su puerto)
+bool is_disk_alive(const std::string& host, int port) {
+    httplib::Client cli(host, port);
+    cli.set_connection_timeout(1, 0); // 1 segundo
+    auto res = cli.Get("/ping");
+    return res && res->status == 200;
+}
+
+// Actualiza el estado y actividad de un disco
+void set_disk_status(int idx, DiskState new_status, const std::string& activity) {
+    std::lock_guard<std::mutex> lock(disk_mutex);
+    disks[idx].status = new_status;
+    disks[idx].last_change = std::chrono::system_clock::now();
+    disks[idx].last_activity = activity;
+}
+
+// Devuelve el tiempo desde el último cambio
+std::string time_since(const std::chrono::system_clock::time_point& tp) {
+    using namespace std::chrono;
+    auto now = system_clock::now();
+    auto secs = duration_cast<seconds>(now - tp).count();
+    if (secs < 60) return std::to_string(secs) + " seconds ago";
+    auto mins = secs / 60;
+    return std::to_string(mins) + " minutes ago";
+}
+
+// Devuelve el JSON de estado de discos
+json get_disk_status_json() {
+    std::lock_guard<std::mutex> lock(disk_mutex);
+    json disks_json = json::array();
+    for (int i = 0; i < disks.size(); ++i) {
+        std::string status_str;
+        switch (disks[i].status) {
+            case ONLINE: status_str = "ONLINE"; break;
+            case BUSY: status_str = "BUSY"; break;
+            case REBUILDING: status_str = "REBUILDING"; break;
+            case FAILED: status_str = "FAILED"; break;
+        }
+        disks_json.push_back({
+            {"name", "Disk D" + std::to_string(i+1)},
+            {"status", status_str},
+            {"activity", disks[i].last_activity + " (" + time_since(disks[i].last_change) + ")"}
+        });
+    }
+    return {{"tag", "disk_status"}, {"disks", disks_json}};
+}
+
+// Refresca el estado de todos los discos antes de cada acción
+void refresh_all_disks_status(DiskState during_action, const std::string& activity) {
+    for (int i = 0; i < numDisks; ++i) {
+        if (is_disk_alive(diskAddrs[i], diskPorts[i])) {
+            set_disk_status(i, during_action, activity);
+        } else {
+            set_disk_status(i, FAILED, "No response");
+        }
+    }
+}
+
+// Refresca el estado de todos los discos después de cada acción
+void refresh_all_disks_status_post(const std::string& activity) {
+    for (int i = 0; i < numDisks; ++i) {
+        if (is_disk_alive(diskAddrs[i], diskPorts[i])) {
+            set_disk_status(i, ONLINE, activity);
+        } else {
+            set_disk_status(i, FAILED, "No response");
+        }
+    }
+}
+
 int main() {
     Server server;
 
@@ -30,13 +109,15 @@ int main() {
     server.set_payload_max_length(200 * 1024 * 1024);
 
     // 1) Ping
-    server.Get("/ping", [](const Request&, Response& res) {
-        json j = { { "estado", "activo" } };
+    server.Get("/ping", [&](const Request& req, Response& res) {
+        refresh_all_disks_status_post("Ping checked");
+        json j = {{"estado", "activo"}, {"disk_status", get_disk_status_json()}};
         res.set_content(j.dump(), "application/json");
     });
 
     // 2) Upload RAID-5
     server.Post("/upload", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Uploading");
         auto filename = req.get_param_value("name");
         auto data = req.body;
         // Guardar tamaño original
@@ -69,7 +150,7 @@ int main() {
                             avail, d2);
         
                         std::ostringstream tmp;
-                        for (int k = 0; k < 4; ++k) {
+                        for (int k = 0; k < 4; k++) {
                             tmp
                               << std::hex << std::setw(2) << std::setfill('0')
                               << static_cast<int>(d2[k]);
@@ -116,7 +197,7 @@ int main() {
                     unsigned char digest[16];
                     MD5((unsigned char*)payload.data(), blkSize, digest);
                     std::ostringstream md5str;
-                    for (int i = 0; i < 4; ++i)
+                    for (int i = 0; i < 4; i++)
                         md5str << std::hex << std::setw(2) << std::setfill('0')
                                << (int)digest[i];
                     std::cerr << "[UPLOAD-DBG] stripe=" << stripeIdx
@@ -134,20 +215,20 @@ int main() {
                 );
                 locations.emplace_back(disk, diskBlockIdx);
             }
-            
-            
         }
         
         std::cerr << "[DEBUG] total stripes=" << (locations.size()/numDisks)
         << " total blocks=" << locations.size() << "\n";
         fileMap[filename] = std::move(locations);
-        json j = { { "status", "OK" } };
+        refresh_all_disks_status_post("Upload complete");
+        json j = { { "status", "OK" }, { "disk_status", get_disk_status_json() } };
         res.set_content(j.dump(), "application/json");
     });
 
 
     // 3) Download RAID-5
     server.Get("/download", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Downloading");
         auto filename = req.get_param_value("name");
         auto itLoc = fileMap.find(filename);
         auto itSz  = fileSizeMap.find(filename);
@@ -226,6 +307,8 @@ int main() {
         if (output.size() > origSize) {
             output.resize(origSize);
         }
+        refresh_all_disks_status_post("Download complete");
+        json j = {{"status", "OK"}, {"disk_status", get_disk_status_json()}};
         res.set_content(output, "application/octet-stream");
     });
     
@@ -286,6 +369,7 @@ int main() {
 
     // 4) DELETE RAID-5 (limpia sólo los bloques de este archivo)
     server.Delete("/delete", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Deleting");
         auto filename = req.get_param_value("name");
         // Busca los metadatos de este archivo
         auto itLoc = fileMap.find(filename);
@@ -322,22 +406,54 @@ int main() {
         fileSizeMap.erase(filename);
 
         // Respuesta OK
-        json j = { { "status", "deleted" } };
+        refresh_all_disks_status_post("Delete complete");
+        json j = {{"status", "deleted"}, {"disk_status", get_disk_status_json()}};
         res.set_content(j.dump(), "application/json");
     });
 
-    
-    
 
     // 7) Listar documentos
     server.Get("/list", [&](const Request& /*req*/, Response& res) {
         json j = json::array();
         for (auto& [name, locs] : fileMap) {
-            j.push_back(name);
+            json file_info;
+            file_info["name"] = name;
+            
+            // Get file size from fileSizeMap
+            auto sizeIt = fileSizeMap.find(name);
+            if (sizeIt != fileSizeMap.end()) {
+                size_t bytes = sizeIt->second;
+                
+                // Format file size nicely
+                if (bytes < 1024) {
+                    file_info["size"] = std::to_string(bytes) + " B";
+                } else if (bytes < 1024 * 1024) {
+                    file_info["size"] = std::to_string(bytes / 1024) + " KB";
+                } else if (bytes < 1024 * 1024 * 1024) {
+                    file_info["size"] = std::to_string(bytes / (1024 * 1024)) + " MB";
+                } else {
+                    file_info["size"] = std::to_string(bytes / (1024 * 1024 * 1024)) + " GB";
+                }
+                
+                file_info["size_bytes"] = bytes;
+            } else {
+                file_info["size"] = "Unknown";
+                file_info["size_bytes"] = 0;
+            }
+            
+            // Add block count information
+            file_info["blocks"] = locs.size();
+            file_info["stripes"] = locs.size() / numDisks;
+            
+            j.push_back(file_info);
         }
         res.set_content(j.dump(), "application/json");
     });
 
+    server.Get("/disk-status", [&](const Request& req, Response& res) {
+        json j = get_disk_status_json();
+        res.set_content(j.dump(), "application/json");
+    });
 
     std::cout << "Controller escuchando en puerto 8080..." << std::endl;
     server.listen("0.0.0.0", 8080);

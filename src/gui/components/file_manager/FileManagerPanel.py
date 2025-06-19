@@ -5,11 +5,16 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QPalette
 import platform
 import importlib
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from client.action_manager import ActionManager
 
 class FileManagerPanel(QFrame):
     def __init__(self):
         super().__init__()
-        self.files = []  # Lista única de archivos
+        self.files = []  # Single file list
+        self.action_manager: Optional['ActionManager'] = None  # Will be set by MainWindow
         self.setup_ui()
         
     def is_dark_mode(self):
@@ -68,13 +73,13 @@ class FileManagerPanel(QFrame):
         
         # Search input
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Nombre de archivo...")
+        self.search_input.setPlaceholderText("File name...")
         self.search_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         # Connect Enter key to search
         self.search_input.returnPressed.connect(self.search_files)
         
         # Search button
-        self.search_button = QPushButton("Buscar")
+        self.search_button = QPushButton("Search")
         self.search_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.search_button.clicked.connect(self.search_files)
         
@@ -137,8 +142,7 @@ class FileManagerPanel(QFrame):
         self.upload_button.setMinimumHeight(35)
         self.upload_button.clicked.connect(self.upload_file)
         bottom_buttons_layout.addWidget(self.upload_button)
-        # Elimino el botón de reboot disk
-        # main_layout.addWidget(bottom_buttons_container)
+        
         main_layout.addWidget(bottom_buttons_container)
         
         self.update()
@@ -192,17 +196,24 @@ class FileManagerPanel(QFrame):
         # Display the filtered results
         self.display_files(matching_files)
         
-        # Show feedback in console
-        if matching_files:
-            print(f"Found {len(matching_files)} file(s) matching '{search_term}'")
-        else:
-            print(f"No files found matching '{search_term}'")
+        # Optional: Log search results via ActionManager (but not as user action)
+        if search_term.strip() and self.action_manager and len(matching_files) > 0:
+            self.action_manager.log_system_event("SEARCH_RESULT", f"Found {len(matching_files)} files matching '{search_term}'")
 
     def delete_file(self, row):
         """Handle file deletion from current disk"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Deleting file: {filename}")
+            
+            # DEBUG: Check if action_manager is available
+            print(f"[DEBUG] delete_file called for: {filename}")
+            print(f"[DEBUG] action_manager is: {self.action_manager}")
+            
+            if self.action_manager:
+                print(f"[DEBUG] Calling action_manager.delete_file({filename})")
+                self.action_manager.delete_file(filename)
+            else:
+                print(f"[DEBUG] action_manager is None!")
             
             # Remove from current disk's file list
             self.files = [(f, s) for f, s in self.files if f != filename]
@@ -214,10 +225,20 @@ class FileManagerPanel(QFrame):
         """Handle file download"""
         if row < self.file_table.rowCount():
             filename = self.file_table.item(row, 0).text()
-            print(f"Downloading file: {filename}")
+            
+            # DEBUG: Check if action_manager is available
+            print(f"[DEBUG] download_file called for: {filename}")
+            print(f"[DEBUG] action_manager is: {self.action_manager}")
+            
+            if self.action_manager:
+                print(f"[DEBUG] Calling action_manager.download_file({filename})")
+                self.action_manager.download_file(filename)
+            else:
+                print(f"[DEBUG] action_manager is None!")
 
     def upload_file(self):
-        """Handle file upload - opens file dialog and prints absolute path"""
+        """Handle file upload"""
+        # Open file dialog
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Select file to upload",
@@ -225,15 +246,9 @@ class FileManagerPanel(QFrame):
             "All Files (*)"
         )
         
-        if file_path:
-            print(f"Selected file for upload: {file_path}")
-            # Here you would normally handle the file upload to the current disk
-            # For now, we just print the absolute path
-    
-    def reboot_disk(self):
-        """Handle disk reboot"""
-        print(f"Rebooting storage unit...")
-        # Here you would normally handle the actual disk reboot functionality
+        if file_path and self.action_manager:
+            # Log the actual file selected
+            self.action_manager.upload_file(file_path)
         
     def update(self):
         self.update_responsive_styling()
@@ -297,7 +312,7 @@ class FileManagerPanel(QFrame):
         
         # Font sizes
         input_font_size = self.calculate_max_font_size("Aa", 200, 27, min_size=8, max_size=14)
-        button_font_size = self.calculate_max_font_size("Buscar", 80, 27, min_size=6, max_size=12)
+        button_font_size = self.calculate_max_font_size("Search", 80, 27, min_size=6, max_size=12)
         
         # Apply styling to controls
         self.search_input.setMinimumWidth(search_width)
@@ -404,9 +419,6 @@ class FileManagerPanel(QFrame):
             if child.frameShape() == QFrame.HLine:
                 child.setStyleSheet("QFrame { color: #666; }")
         
-    def get_selected_disk(self):
-        return self.disk_selector.currentText()
-        
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update()
@@ -414,6 +426,3 @@ class FileManagerPanel(QFrame):
     def set_files(self, files):
         self.files = files
         self.display_files(self.files)
-        
-    def set_button_callbacks(self):
-        self.upload_button.clicked.connect(lambda: print("[ACTION] Would upload file to storage unit"))

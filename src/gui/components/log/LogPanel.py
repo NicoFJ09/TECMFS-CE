@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QFontMetrics
 import datetime
+from config import LOG_CONFIG
 
 class LogPanel(QFrame):
     def __init__(self):
@@ -61,18 +62,22 @@ class LogPanel(QFrame):
         self.update()
         
     def add_log_message(self, level, message):
-        """Add a new log message with timestamp and level"""
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        """Add a new log message with timestamp and level usando config"""
+        timestamp = datetime.datetime.now().strftime(LOG_CONFIG["timestamp_format"])
         
         # Create formatted message with separators
         formatted_message = f"[{timestamp}] {level}: {message}"
         self.log_messages.append(formatted_message)
         
+        # Mantener solo el máximo configurado de logs
+        if len(self.log_messages) > LOG_CONFIG["max_logs"]:
+            self.log_messages = self.log_messages[-LOG_CONFIG["max_logs"]:]
+        
         # Update display
         self.update_log_display()
         
-        # Auto-scroll to bottom if enabled
-        if self.auto_scroll_checkbox.isChecked():
+        # Auto-scroll to bottom if enabled usando config
+        if LOG_CONFIG.get("auto_scroll", True) and self.auto_scroll_checkbox.isChecked():
             scrollbar = self.log_display.verticalScrollBar()
             scrollbar.setValue(scrollbar.maximum())
     
@@ -90,7 +95,7 @@ class LogPanel(QFrame):
         """Clear all log messages"""
         self.log_messages.clear()
         self.log_display.clear()
-        print("Logs cleared")
+        # NO print a consola - la acción se loggea via ActionManager
 
     def update(self):
         self.update_responsive_styling()
@@ -152,6 +157,3 @@ class LogPanel(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update()
-        
-    def set_button_callbacks(self):
-        self.clear_button.clicked.connect(lambda: print("[ACTION] Would clear all logs"))

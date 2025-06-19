@@ -1,19 +1,19 @@
-# disk_monitor.py
+from components.disk_status.CylinderWidget import DiskStatus
 
 class DiskMonitor:
     def __init__(self, panel):
         self.panel = panel
+        # Map of strings to enums
+        self.status_mapping = {
+            "ONLINE": DiskStatus.ONLINE,
+            "REBUILDING": DiskStatus.REBUILDING,
+            "BUSY": DiskStatus.BUSY,
+            "FAILED": DiskStatus.FAILED
+        }
 
     def update_from_json(self, data):
-        disks = data.get("disks", [])
-        for i, disk in enumerate(disks):
-            # status as string, used as string, activity as string
-            status = getattr(self.panel.disks[i], 'status', None)
-            if hasattr(self.panel.disks[i], 'set_status'):
-                self.panel.disks[i].set_status(getattr(self.panel.disks[i], 'status', None))
-            self.panel.update_disk_status(
-                i,
-                getattr(self.panel.disks[i], 'status', None),
-                disk.get("used", "0%"),
-                disk.get("activity", "")
-            )
+        """
+        Aquí es donde los datos del servidor se registran en el DiskStatusPanel.
+        """
+        if hasattr(self.panel, "update_disk_status"):
+            self.panel.update_disk_status(data)

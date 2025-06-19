@@ -27,7 +27,7 @@ class DiskStatusPanel(QFrame):
         self.disks = []
         self.info_labels = []
         disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
-        statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
+        statuses = [DiskStatus.ONLINE, DiskStatus.ONLINE, DiskStatus.ONLINE, DiskStatus.ONLINE]
         
         # Cylinder visualization section
         cylinders_layout = QVBoxLayout()
@@ -52,7 +52,6 @@ class DiskStatusPanel(QFrame):
             # Set empty/default info, will be updated by system
             info_text = f"<b>{disk_names[i]}</b><br>"
             info_text += f"Status: <b>{statuses[i].name}</b><br>"
-            info_text += f"Used Space: -<br>"
             info_text += f"Last activity: -"
             
             info_widget.setText(info_text)
@@ -61,21 +60,15 @@ class DiskStatusPanel(QFrame):
         content_layout.addLayout(cylinders_layout, 1)
         content_layout.addLayout(info_layout, 1)
         main_layout.addLayout(content_layout)
-        # Disk controls (dropdown + reboot)
+        # Disk controls (refresh)
         controls_container = QWidget()
         controls_layout = QHBoxLayout(controls_container)
         controls_layout.setContentsMargins(40, 10, 40, 10)
         controls_layout.setSpacing(20)
-        self.disk_selector = QComboBox()
-        self.disk_selector.addItems(["Disk D1", "Disk D2", "Disk D3", "Disk D4"])
-        self.disk_selector.setCurrentIndex(0)
-        self.disk_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.reboot_button = QPushButton("Reboot Disk")
-        self.reboot_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.reboot_button.setMinimumHeight(35)
-        controls_layout.addWidget(self.disk_selector)
-        controls_layout.addSpacing(20)
-        controls_layout.addWidget(self.reboot_button)
+        self.refresh_button = QPushButton("Refresh Disk")
+        self.refresh_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.refresh_button.setMinimumHeight(35)
+        controls_layout.addWidget(self.refresh_button)
         main_layout.addWidget(controls_container)
         self.update()
         
@@ -120,7 +113,7 @@ class DiskStatusPanel(QFrame):
         label_text_height = label_container_height - (INFO_PADDING * 2)
         label_text_width = max(40, label_text_width)
         label_text_height = max(20, label_text_height)
-        sample_text = "Disk D1\nStatus: REBUILDING\nUsed Space: 68%\nLast activity: 3 seconds ago"
+        sample_text = "Disk D1\nStatus: REBUILDING\nLast activity: 3 seconds ago"
         info_font_size = self.calculate_max_font_size(sample_text, label_text_width, label_text_height, min_size=4, max_size=16)
         for info_label in self.info_labels:
             info_label.setFont(QFont("Arial", info_font_size))
@@ -133,9 +126,9 @@ class DiskStatusPanel(QFrame):
                     margin: {INFO_PADDING//2}px;
                 }}
             """)
-        # Restore reboot button style (visual only, not size)
-        if hasattr(self, 'reboot_button'):
-            self.reboot_button.setStyleSheet(f"""
+        # Restore refresh button style (visual only, not size)
+        if hasattr(self, 'refresh_button'):
+            self.refresh_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #dc3545;
                     color: white;
@@ -153,18 +146,21 @@ class DiskStatusPanel(QFrame):
                     background-color: #bd2130;
                 }}
             """)
-
-    def update_disk_status(self, disk_index, status, used_space, last_activity):
-        if 0 <= disk_index < len(self.disks):
-            self.disks[disk_index].set_status(status)
             
-            info_text = f"<b>Disk D{disk_index + 1}</b><br>"
-            info_text += f"Status: <b>{status.name}</b><br>"
-            info_text += f"Used Space: {used_space}<br>"
-            info_text += f"Last activity: {last_activity}"
-            
-            self.info_labels[disk_index].setText(info_text)
-            self.update_responsive_styling()
-
-    def set_button_callbacks(self):
-        self.reboot_button.clicked.connect(lambda: print(f"[ACTION] Would send reboot command for: {self.disk_selector.currentText()}"))
+    def update_disk_status(self, disk_status_data):
+        """
+        Actualiza la UI de discos usando solo los datos recibidos del servidor.
+        """
+        disks = disk_status_data.get("disks", [])
+        for i, disk in enumerate(disks):
+            name = disk.get("name", f"Disk D{i+1}")
+            status = disk.get("status", "UNKNOWN")
+            activity = disk.get("activity", "")
+            # Actualiza el label o widget correspondiente en tu UI
+            if i < len(self.info_labels):
+                self.info_labels[i].setText(
+                    f"<b>{name}</b><br>Status: <b>{status}</b><br>Last activity: {activity}"
+                )
+            if hasattr(self, "disks") and i < len(self.disks):
+                # Si tienes un widget visual para el estado, actualízalo aquí
+                self.disks[i].set_status(status)
