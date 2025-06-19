@@ -177,7 +177,6 @@ class ServerService(QObject):
             disks.append({
                 "name": disk_name,
                 "status": status,
-                "used": f"{(ok_blocks * 100) // total_blocks}%",
                 "activity": f"Checked {ok_blocks}/{total_blocks} blocks"
             })
         
@@ -190,18 +189,17 @@ class ServerService(QObject):
         for i, disk_name in enumerate(DISK_CONFIG["disk_names"]):
             # Simulate different states for demo
             if i == 0:
-                status, used, activity = "ONLINE", "45%", "1 minute ago"
+                status, activity = "ONLINE", "1 minute ago"
             elif i == 1:
-                status, used, activity = "REBUILDING", "68%", "3 seconds ago"
+                status, activity = "REBUILDING", "3 seconds ago"
             elif i == 2:
-                status, used, activity = "BUSY", "72%", "Active now"
+                status, activity = "BUSY", "Active now"
             else:
-                status, used, activity = "FAILED", "0%", "System error"
+                status, activity = "FAILED", "System error"
                 
             fallback_disks.append({
                 "name": disk_name,
                 "status": status,
-                "used": used,
                 "activity": activity
             })
         
@@ -233,6 +231,32 @@ class ServerService(QObject):
         self.data_received.emit(fallback_log)
     
     # ========== FILE OPERATIONS ==========
+
+    def fetch_file_list(self):
+        """Fetch the current file list from the server and emit it"""
+        try:
+            file_list = self.http_client.get("/list")
+            if file_list and isinstance(file_list, list):
+                # Maneja ambos formatos (nuevo y antiguo)
+                if len(file_list) > 0 and isinstance(file_list[0], dict):
+                    files = []
+                    for file_info in file_list:
+                        files.append({
+                            "name": file_info.get("name", "Unknown"),
+                            "size": file_info.get("size", "Unknown"),
+                            "blocks": file_info.get("blocks", 0),
+                            "stripes": file_info.get("stripes", 0)
+                        })
+                else:
+                    files = [{"name": filename, "size": "Unknown"} for filename in file_list]
+                file_data = {
+                    "tag": "file_manager",
+                    "files": files
+                }
+                self.data_received.emit(file_data)
+        except Exception as e:
+            self.error_occurred.emit("ERROR", f"Failed to fetch file list: {str(e)}")
+            
     def upload_file(self, file_path, filename=None):
         """Upload a file to the server"""
         try:
@@ -258,8 +282,7 @@ class ServerService(QObject):
             
             if response and response.get("status") == "OK":
                 self.error_occurred.emit("INFO", f"File '{filename}' uploaded successfully")
-                # Trigger file list refresh
-                self._fetch_individual_data()
+                self.fetch_file_list()
                 return True
             else:
                 self.error_occurred.emit("ERROR", f"Upload failed: {response or 'No response'}")
@@ -302,11 +325,10 @@ class ServerService(QObject):
         """Delete a file from the server"""
         try:
             response = self.http_client.delete(f"/delete?name={filename}")
-            
+                    
             if response and response.get("status") == "deleted":
                 self.error_occurred.emit("INFO", f"File '{filename}' deleted successfully")
-                # Trigger file list refresh
-                self._fetch_individual_data()
+                self.fetch_file_list()
                 return True
             elif response and "error" in response:
                 self.error_occurred.emit("ERROR", f"Delete failed: {response['error']}")

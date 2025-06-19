@@ -300,8 +300,6 @@ int main() {
         res.set_content(j.dump(), "application/json");
     });
 
-    
-    
 
     // 7) Listar documentos
     server.Get("/list", [&](const Request& /*req*/, Response& res) {
@@ -365,10 +363,10 @@ int main() {
             {"disk_status", {
                 {"tag", "disk_status"},
                 {"disks", {
-                    {{"name", "Disk D1"}, {"status", "ONLINE"}, {"used", "45%"}, {"activity", "1 minute ago"}},
-                    {{"name", "Disk D2"}, {"status", "REBUILDING"}, {"used", "68%"}, {"activity", "3 seconds ago"}},
-                    {{"name", "Disk D3"}, {"status", "BUSY"}, {"used", "72%"}, {"activity", "Active now"}},
-                    {{"name", "Disk D4"}, {"status", "FAILED"}, {"used", "0%"}, {"activity", "System error"}}
+                    {{"name", "Disk D1"}, {"status", "ONLINE"}, {"activity", "1 minute ago"}},
+                    {{"name", "Disk D2"}, {"status", "REBUILDING"}, {"activity", "3 seconds ago"}},
+                    {{"name", "Disk D3"}, {"status", "BUSY"}, {"activity", "Active now"}},
+                    {{"name", "Disk D4"}, {"status", "FAILED"}, {"activity", "System error"}}
                 }}
             }}
         };

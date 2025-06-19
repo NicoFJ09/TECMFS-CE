@@ -7,7 +7,6 @@ import urllib.parse
 import json
 from config import SERVER_CONFIG
 
-
 class HTTPClient:
     """Basic HTTP client without business logic"""
     
@@ -63,20 +62,18 @@ class HTTPClient:
             return None
     
     def post_binary(self, endpoint, binary_data, content_type="application/octet-stream", params=None):
-        """POST request for binary data (files)"""
+        url = self.base_url + endpoint
+        req = urllib.request.Request(url, data=binary_data, method="POST")
+        req.add_header("Content-Type", content_type)
         try:
-            url = f"{self.base_url}{endpoint}"
-            if params:
-                query_string = urllib.parse.urlencode(params)
-                url = f"{url}?{query_string}"
-            
-            req = urllib.request.Request(url, data=binary_data)
-            req.add_header('Content-Type', content_type)
-            req.get_method = lambda: 'POST'
-            
-            response = urllib.request.urlopen(req, timeout=self.timeout)
-            return json.loads(response.read().decode('utf-8'))
+            with urllib.request.urlopen(req, timeout=self.timeout) as response:
+                resp_data = response.read()
+                try:
+                    return json.loads(resp_data.decode("utf-8"))
+                except Exception:
+                    return None
         except Exception as e:
+            print(f"[HTTPClient] post_binary error: {e}")
             return None
 
     def get_binary(self, endpoint, params=None):

@@ -23,6 +23,5 @@ class DiskMonitor:
                 self.panel.update_disk_status(
                     i,
                     status_enum,
-                    disk.get("used", "0%"),
                     disk.get("activity", "No activity")
                 )
