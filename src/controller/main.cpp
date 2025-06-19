@@ -69,7 +69,7 @@ int main() {
                             avail, d2);
         
                         std::ostringstream tmp;
-                        for (int k = 0; k < 4; ++k) {
+                        for (int k = 0; k < 4; k++) {
                             tmp
                               << std::hex << std::setw(2) << std::setfill('0')
                               << static_cast<int>(d2[k]);
@@ -116,7 +116,7 @@ int main() {
                     unsigned char digest[16];
                     MD5((unsigned char*)payload.data(), blkSize, digest);
                     std::ostringstream md5str;
-                    for (int i = 0; i < 4; ++i)
+                    for (int i = 0; i < 4; i++)
                         md5str << std::hex << std::setw(2) << std::setfill('0')
                                << (int)digest[i];
                     std::cerr << "[UPLOAD-DBG] stripe=" << stripeIdx
@@ -307,13 +307,60 @@ int main() {
     server.Get("/list", [&](const Request& /*req*/, Response& res) {
         json j = json::array();
         for (auto& [name, locs] : fileMap) {
-            j.push_back(name);
+            json file_info;
+            file_info["name"] = name;
+            
+            // Get file size from fileSizeMap
+            auto sizeIt = fileSizeMap.find(name);
+            if (sizeIt != fileSizeMap.end()) {
+                size_t bytes = sizeIt->second;
+                
+                // Format file size nicely
+                if (bytes < 1024) {
+                    file_info["size"] = std::to_string(bytes) + " B";
+                } else if (bytes < 1024 * 1024) {
+                    file_info["size"] = std::to_string(bytes / 1024) + " KB";
+                } else if (bytes < 1024 * 1024 * 1024) {
+                    file_info["size"] = std::to_string(bytes / (1024 * 1024)) + " MB";
+                } else {
+                    file_info["size"] = std::to_string(bytes / (1024 * 1024 * 1024)) + " GB";
+                }
+                
+                file_info["size_bytes"] = bytes;
+            } else {
+                file_info["size"] = "Unknown";
+                file_info["size_bytes"] = 0;
+            }
+            
+            // Add block count information
+            file_info["blocks"] = locs.size();
+            file_info["stripes"] = locs.size() / numDisks;
+            
+            j.push_back(file_info);
         }
         res.set_content(j.dump(), "application/json");
     });
 
-    // 8) Endpoint para datos de GUI (formato exacto que espera la GUI)
-    server.Get("/gui-data", [&](const Request& /*req*/, Response& res) {
+    // 8) Reboot disk (placeholder - no hace nada por ahora)
+    server.Post("/reboot", [&](const Request& req, Response& res) {
+        auto diskName = req.get_param_value("disk");
+        
+        // Debug: log reboot request
+        std::cerr << "[REBOOT] Request to reboot disk: " << diskName << "\n";
+        
+        // TODO: Implement actual disk reboot logic
+        // For now, just return success message
+        json j = {
+            {"status", "accepted"},
+            {"disk", diskName},
+            {"message", "Reboot request received - not implemented yet"},
+            {"action", "placeholder"}
+        };
+        res.set_content(j.dump(), "application/json");
+    });
+
+    // 9) Disk status (hardcoded for GUI)
+    server.Get("/disk-status", [&](const Request& /*req*/, Response& res) {
         json response = {
             {"disk_status", {
                 {"tag", "disk_status"},
@@ -322,14 +369,6 @@ int main() {
                     {{"name", "Disk D2"}, {"status", "REBUILDING"}, {"used", "68%"}, {"activity", "3 seconds ago"}},
                     {{"name", "Disk D3"}, {"status", "BUSY"}, {"used", "72%"}, {"activity", "Active now"}},
                     {{"name", "Disk D4"}, {"status", "FAILED"}, {"used", "0%"}, {"activity", "System error"}}
-                }}
-            }},
-            {"file_manager", {
-                {"tag", "file_manager"},
-                {"files", {
-                    {{"name", "system_config.ini"}, {"size", "2 KB"}},
-                    {{"name", "boot.img"}, {"size", "128 MB"}},
-                    {{"name", "kernel.bin"}, {"size", "45 MB"}}
                 }}
             }}
         };

@@ -7,7 +7,7 @@ import time
 from PyQt5.QtCore import QObject, pyqtSignal
 from .http_client import HTTPClient
 from config import SERVER_CONFIG, DISK_CONFIG, DEFAULT_MESSAGES
-
+from urllib.parse import quote
 
 class ServerService(QObject):
     """Service that handles specific communication with TECMFS-CE"""
@@ -84,20 +84,13 @@ class ServerService(QObject):
     def _fetch_server_data(self):
         """Get real server data"""
         try:
-            # Try to get structured data from server
-            gui_data = self.http_client.get("/gui-data")
+            # Get disk status from dedicated endpoint (hardcoded)
+            disk_data = self.http_client.get("/disk-status")
+            if disk_data and "disk_status" in disk_data:
+                self.data_received.emit(disk_data["disk_status"])
             
-            if gui_data:
-                # Send server data
-                if "disk_status" in gui_data:
-                    self.data_received.emit(gui_data["disk_status"])
-                if "file_manager" in gui_data:
-                    self.data_received.emit(gui_data["file_manager"])
-                if "logs" in gui_data:
-                    self.data_received.emit(gui_data["logs"])
-            else:
-                # If no gui-data, build from individual endpoints
-                self._fetch_individual_data()
+            # Get real file data from individual endpoints
+            self._fetch_individual_data()
                 
         except Exception as e:
             self.error_occurred.emit("ERROR", f"Failed to fetch server data: {str(e)}")
@@ -115,11 +108,27 @@ class ServerService(QObject):
             # File list from /list
             file_list = self.http_client.get("/list")
             if file_list:
-                file_data = {
-                    "tag": "file_manager",
-                    "files": [{"name": filename, "size": "Unknown"} for filename in file_list]
-                }
-                self.data_received.emit(file_data)
+                # Check if we get the new format with file info or old format with just names
+                if file_list and isinstance(file_list, list):
+                    if len(file_list) > 0 and isinstance(file_list[0], dict):
+                        # New format: list of objects with name, size, etc.
+                        files = []
+                        for file_info in file_list:
+                            files.append({
+                                "name": file_info.get("name", "Unknown"),
+                                "size": file_info.get("size", "Unknown"),
+                                "blocks": file_info.get("blocks", 0),
+                                "stripes": file_info.get("stripes", 0)
+                            })
+                    else:
+                        # Old format: list of strings (just filenames)
+                        files = [{"name": filename, "size": "Unknown"} for filename in file_list]
+                    
+                    file_data = {
+                        "tag": "file_manager",
+                        "files": files
+                    }
+                    self.data_received.emit(file_data)
                 
         except Exception as e:
             self.error_occurred.emit("ERROR", f"Failed to fetch individual data: {str(e)}")
@@ -222,3 +231,111 @@ class ServerService(QObject):
             ]
         }
         self.data_received.emit(fallback_log)
+    
+    # ========== FILE OPERATIONS ==========
+    def upload_file(self, file_path, filename=None):
+        """Upload a file to the server"""
+        try:
+            import os
+            if not os.path.exists(file_path):
+                self.error_occurred.emit("ERROR", f"File not found: {file_path}")
+                return False
+                
+            # Use filename from path if not specified
+            if not filename:
+                filename = os.path.basename(file_path)
+            
+            # Read file content
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            
+            # Upload using HTTPClient
+            response = self.http_client.post_binary(
+                f"/upload?name={filename}", 
+                file_content, 
+                "application/octet-stream"
+            )
+            
+            if response and response.get("status") == "OK":
+                self.error_occurred.emit("INFO", f"File '{filename}' uploaded successfully")
+                # Trigger file list refresh
+                self._fetch_individual_data()
+                return True
+            else:
+                self.error_occurred.emit("ERROR", f"Upload failed: {response or 'No response'}")
+                return False
+                
+        except Exception as e:
+            self.error_occurred.emit("ERROR", f"Upload error: {str(e)}")
+            return False
+    
+    def download_file(self, filename, save_path=None):
+        """Download a file from the server"""
+        try:
+            import os
+            
+            # Use default path if not specified
+            if not save_path:
+                save_path = f"downloads/{filename}"
+                
+            # Create downloads directory if it doesn't exist
+            os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else "downloads", exist_ok=True)
+            
+            # Download using HTTPClient
+            binary_data = self.http_client.get_binary(f"/download?name={filename}")
+            
+            if binary_data:
+                with open(save_path, 'wb') as f:
+                    f.write(binary_data)
+                
+                self.error_occurred.emit("INFO", f"File '{filename}' downloaded to '{save_path}'")
+                return True
+            else:
+                self.error_occurred.emit("ERROR", f"Download failed: File '{filename}' not found or server error")
+                return False
+                
+        except Exception as e:
+            self.error_occurred.emit("ERROR", f"Download error: {str(e)}")
+            return False
+    
+    def delete_file(self, filename):
+        """Delete a file from the server"""
+        try:
+            response = self.http_client.delete(f"/delete?name={filename}")
+            
+            if response and response.get("status") == "deleted":
+                self.error_occurred.emit("INFO", f"File '{filename}' deleted successfully")
+                # Trigger file list refresh
+                self._fetch_individual_data()
+                return True
+            elif response and "error" in response:
+                self.error_occurred.emit("ERROR", f"Delete failed: {response['error']}")
+                return False
+            else:
+                self.error_occurred.emit("ERROR", f"Delete failed: No response from server")
+                return False
+                
+        except Exception as e:
+            self.error_occurred.emit("ERROR", f"Delete error: {str(e)}")
+            return False
+    
+    def reboot_disk(self, disk_name):
+        """Reboot a specific disk (placeholder)"""
+        try:
+            encoded_disk = quote(disk_name)
+            response = self.http_client.post(f"/reboot?disk={encoded_disk}")
+
+            print("DEBUG reboot response:", response)  # Para depuración
+
+            if response and response.get("status") == "accepted":
+                msg = response.get("message", "")
+                self.error_occurred.emit("INFO", f"Reboot request sent for {disk_name}: {msg}")
+                return True, msg
+            else:
+                msg = response.get("message", "") if response else "No response"
+                self.error_occurred.emit("ERROR", f"Reboot failed for {disk_name}: {msg}")
+                return False, msg
+
+        except Exception as e:
+            self.error_occurred.emit("ERROR", f"Reboot error for {disk_name}: {str(e)}")
+            return False, str(e)

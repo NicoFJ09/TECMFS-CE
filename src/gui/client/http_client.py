@@ -61,3 +61,33 @@ class HTTPClient:
             return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             return None
+    
+    def post_binary(self, endpoint, binary_data, content_type="application/octet-stream", params=None):
+        """POST request for binary data (files)"""
+        try:
+            url = f"{self.base_url}{endpoint}"
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                url = f"{url}?{query_string}"
+            
+            req = urllib.request.Request(url, data=binary_data)
+            req.add_header('Content-Type', content_type)
+            req.get_method = lambda: 'POST'
+            
+            response = urllib.request.urlopen(req, timeout=self.timeout)
+            return json.loads(response.read().decode('utf-8'))
+        except Exception as e:
+            return None
+
+    def get_binary(self, endpoint, params=None):
+        """GET request for binary data (file downloads)"""
+        try:
+            url = f"{self.base_url}{endpoint}"
+            if params:
+                query_string = urllib.parse.urlencode(params)
+                url = f"{url}?{query_string}"
+            
+            response = urllib.request.urlopen(url, timeout=self.timeout)
+            return response.read()  # Return raw binary data
+        except Exception as e:
+            return None
