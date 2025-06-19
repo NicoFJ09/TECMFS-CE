@@ -330,25 +330,21 @@ class ServerService(QObject):
             self.error_occurred.emit("ERROR", f"Delete error: {str(e)}")
             return False
     
-    def reboot_disk(self, disk_name):
-        """Reboot a specific disk (placeholder)"""
+    def refresh_disk(self):
+        """Refresca el estado de todos los discos"""
         try:
-            encoded_disk = quote(disk_name)
-            response = self.http_client.post(f"/reboot?disk={encoded_disk}")
+            response = self.http_client.get("/disk-status")
+            print("DEBUG refresh response:", response)  # Para depuración
 
-            print("DEBUG reboot response:", response)  # Para depuración
-
-            if response and response.get("status") == "accepted":
-                if "disk_status" in response:
-                    self.data_received.emit(response["disk_status"])
-                msg = response.get("message", "")
-                self.error_occurred.emit("INFO", f"Reboot request sent for {disk_name}: {msg}")
-                return True, msg
+            if response and response.get("tag") == "disk_status":
+                self.data_received.emit(response)
+                self.error_occurred.emit("INFO", "Disk status refreshed")
+                return True, "Disk status refreshed"
             else:
                 msg = response.get("message", "") if response else "No response"
-                self.error_occurred.emit("ERROR", f"Reboot failed for {disk_name}: {msg}")
+                self.error_occurred.emit("ERROR", f"Refresh failed: {msg}")
                 return False, msg
 
         except Exception as e:
-            self.error_occurred.emit("ERROR", f"Reboot error for {disk_name}: {str(e)}")
+            self.error_occurred.emit("ERROR", f"Refresh error: {str(e)}")
             return False, str(e)

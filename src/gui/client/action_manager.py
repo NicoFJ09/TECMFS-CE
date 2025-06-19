@@ -5,7 +5,6 @@ Logs all user actions before execution
 from PyQt5.QtCore import QObject, pyqtSignal
 from config import DEFAULT_MESSAGES, DISK_CONFIG
 
-
 class ActionManager(QObject):
     """Manages all user actions and logs them"""
     
@@ -37,32 +36,19 @@ class ActionManager(QObject):
         
     
     # ========== DISK ACTIONS (INFO level) ==========
-    def reboot_disk(self, disk_name):
-        """Restart a specific disk"""
-        if disk_name not in DISK_CONFIG["disk_names"]:
-            self.log_warning(f"Unknown disk selected: {disk_name}")
-            return
-
-        self.log_user_action("REBOOT_DISK", f"Target: {disk_name}")
+    def refresh_disk(self):
+        """Refresca el estado de todos los discos llamando al server_service"""
+        self.log_user_action("REFRESH_DISKS", "Refreshing all disks")
 
         if self.server_service:
-            success, msg = self.server_service.reboot_disk(disk_name)
+            success, msg = self.server_service.refresh_disk()
             if success:
-
-                self.log_system_event("REBOOT_COMMAND", f"Reboot request sent to {disk_name}: {msg}")
+                self.log_system_event("REFRESH_COMMAND", f"Refresh request sent: {msg}")
                 self.action_logged.emit("INFO", f"Server response: {msg}")
             else:
-                self.log_error(f"Reboot failed for {disk_name}: {msg}")
+                self.log_error(f"Refresh failed: {msg}")
         else:
-            self.log_error("No server service available for reboot")
-        
-    def select_disk(self, disk_name):
-        """Select a disk - not logged as user action"""
-        # Log disk changes as system events, not user actions
-        if disk_name in DISK_CONFIG["disk_names"]:
-            self.log_system_event("DISK_SELECTION", f"Active disk: {disk_name}")
-        else:
-            self.log_warning(f"Invalid disk selection: {disk_name}")
+            self.log_error("No server service available for refresh")
         
     # ========== FILE ACTIONS (INFO level) ==========
     def upload_file(self, file_path=""):

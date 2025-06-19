@@ -249,11 +249,6 @@ class FileManagerPanel(QFrame):
         if file_path and self.action_manager:
             # Log the actual file selected
             self.action_manager.upload_file(file_path)
-    
-    def reboot_disk(self):
-        """Handle disk reboot"""
-        if self.action_manager:
-            self.action_manager.log_system_event("DEPRECATED", "reboot_disk called from FileManagerPanel")
         
     def update(self):
         self.update_responsive_styling()
@@ -423,9 +418,6 @@ class FileManagerPanel(QFrame):
         for child in self.findChildren(QFrame):
             if child.frameShape() == QFrame.HLine:
                 child.setStyleSheet("QFrame { color: #666; }")
-        
-    def get_selected_disk(self):
-        return self.disk_selector.currentText()
         
     def resizeEvent(self, event):
         super().resizeEvent(event)

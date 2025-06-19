@@ -60,21 +60,15 @@ class DiskStatusPanel(QFrame):
         content_layout.addLayout(cylinders_layout, 1)
         content_layout.addLayout(info_layout, 1)
         main_layout.addLayout(content_layout)
-        # Disk controls (dropdown + reboot)
+        # Disk controls (refresh)
         controls_container = QWidget()
         controls_layout = QHBoxLayout(controls_container)
         controls_layout.setContentsMargins(40, 10, 40, 10)
         controls_layout.setSpacing(20)
-        self.disk_selector = QComboBox()
-        self.disk_selector.addItems(["Disk D1", "Disk D2", "Disk D3", "Disk D4"])
-        self.disk_selector.setCurrentIndex(0)
-        self.disk_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.reboot_button = QPushButton("Reboot Disk")
-        self.reboot_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.reboot_button.setMinimumHeight(35)
-        controls_layout.addWidget(self.disk_selector)
-        controls_layout.addSpacing(20)
-        controls_layout.addWidget(self.reboot_button)
+        self.refresh_button = QPushButton("Refresh Disk")
+        self.refresh_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.refresh_button.setMinimumHeight(35)
+        controls_layout.addWidget(self.refresh_button)
         main_layout.addWidget(controls_container)
         self.update()
         
@@ -132,9 +126,9 @@ class DiskStatusPanel(QFrame):
                     margin: {INFO_PADDING//2}px;
                 }}
             """)
-        # Restore reboot button style (visual only, not size)
-        if hasattr(self, 'reboot_button'):
-            self.reboot_button.setStyleSheet(f"""
+        # Restore refresh button style (visual only, not size)
+        if hasattr(self, 'refresh_button'):
+            self.refresh_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #dc3545;
                     color: white;

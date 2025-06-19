@@ -97,20 +97,13 @@ class MainWindow(QMainWindow):
         """Sets up all button callbacks to use ActionManager"""
         
         # === DISK PANEL CALLBACKS ===
-        if hasattr(self.disk_panel, 'reboot_button'):
+        if hasattr(self.disk_panel, 'refresh_button'):
             try:
-                self.disk_panel.reboot_button.clicked.disconnect()
+                self.disk_panel.refresh_button.clicked.disconnect()
             except:
                 pass
-            self.disk_panel.reboot_button.clicked.connect(self.on_reboot_disk_clicked)
+            self.disk_panel.refresh_button.clicked.connect(self.on_refresh_disk_clicked)
             
-        if hasattr(self.disk_panel, 'disk_selector'):
-            try:
-                self.disk_panel.disk_selector.currentTextChanged.disconnect()
-            except:
-                pass
-            self.disk_panel.disk_selector.currentTextChanged.connect(self.on_disk_selected)
-        
         # === FILE MANAGER CALLBACKS ===
         if hasattr(self.filemanager_panel, 'search_button'):
             try:
@@ -138,14 +131,9 @@ class MainWindow(QMainWindow):
         self.action_manager.log_system_event("INITIALIZATION", "All button callbacks configured")
         
     # === DISK PANEL HANDLERS ===
-    def on_reboot_disk_clicked(self):
-        """Handles click on the reboot button"""
-        selected_disk = self.disk_panel.disk_selector.currentText()
-        self.action_manager.reboot_disk(selected_disk)
-        
-    def on_disk_selected(self, disk_name):
-        """Handles disk selection"""
-        self.action_manager.select_disk(disk_name)
+    def on_refresh_disk_clicked(self):
+        """Handles click on the refresh button"""
+        self.action_manager.refresh_disk()
         
     # === FILE MANAGER HANDLERS ===
     def on_search_files_clicked(self):

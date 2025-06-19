@@ -424,30 +424,6 @@ int main() {
         res.set_content(j.dump(), "application/json");
     });
 
-    // 8) Reboot disk (placeholder - no hace nada por ahora)
-    server.Post("/reboot", [&](const Request& req, Response& res) {
-        auto diskName = req.get_param_value("disk");
-        int idx = -1;
-        for (int i = 0; i < numDisks; ++i) {
-            if (diskName == "Disk D" + std::to_string(i+1)) idx = i;
-        }
-        if (idx >= 0) {
-            set_disk_status(idx, REBUILDING, "Rebooting");
-            // Simula reboot: stop/start contenedor (real: system call a docker-compose)
-            std::this_thread::sleep_for(std::chrono::seconds(2)); // Simulación
-            if (is_disk_alive(diskAddrs[idx], diskPorts[idx])) {
-                set_disk_status(idx, ONLINE, "Reboot complete");
-            } else {
-                set_disk_status(idx, FAILED, "No response after reboot");
-            }
-            json j = {{"status", "accepted"}, {"disk_status", get_disk_status_json()}};
-            res.set_content(j.dump(), "application/json");
-        } else {
-            json j = {{"status", "error"}, {"message", "Invalid disk"}, {"disk_status", get_disk_status_json()}};
-            res.set_content(j.dump(), "application/json");
-        }
-    });
-
     server.Get("/disk-status", [&](const Request& req, Response& res) {
         json j = get_disk_status_json();
         res.set_content(j.dump(), "application/json");
