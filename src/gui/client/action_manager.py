@@ -34,6 +34,7 @@ class ActionManager(QObject):
     def log_error(self, message):
         """Log error with ERROR level"""
         self.action_logged.emit("ERROR", message)
+        
     
     # ========== DISK ACTIONS (INFO level) ==========
     def reboot_disk(self, disk_name):

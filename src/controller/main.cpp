@@ -23,6 +23,85 @@ std::map<std::string, std::vector<std::pair<int,int>>> fileMap;
 // Tamaño original de cada archivo
 std::map<std::string, size_t> fileSizeMap;
 
+enum DiskState { ONLINE, BUSY, REBUILDING, FAILED };
+struct DiskInfo {
+    DiskState status = ONLINE;
+    std::chrono::system_clock::time_point last_change = std::chrono::system_clock::now();
+    std::string last_activity = "Idle";
+};
+
+std::vector<DiskInfo> disks(numDisks); // numDisks = 4
+std::mutex disk_mutex;
+
+// Verifica si un disco está encendido (responde en su puerto)
+bool is_disk_alive(const std::string& host, int port) {
+    httplib::Client cli(host, port);
+    cli.set_connection_timeout(1, 0); // 1 segundo
+    auto res = cli.Get("/ping");
+    return res && res->status == 200;
+}
+
+// Actualiza el estado y actividad de un disco
+void set_disk_status(int idx, DiskState new_status, const std::string& activity) {
+    std::lock_guard<std::mutex> lock(disk_mutex);
+    disks[idx].status = new_status;
+    disks[idx].last_change = std::chrono::system_clock::now();
+    disks[idx].last_activity = activity;
+}
+
+// Devuelve el tiempo desde el último cambio
+std::string time_since(const std::chrono::system_clock::time_point& tp) {
+    using namespace std::chrono;
+    auto now = system_clock::now();
+    auto secs = duration_cast<seconds>(now - tp).count();
+    if (secs < 60) return std::to_string(secs) + " seconds ago";
+    auto mins = secs / 60;
+    return std::to_string(mins) + " minutes ago";
+}
+
+// Devuelve el JSON de estado de discos
+json get_disk_status_json() {
+    std::lock_guard<std::mutex> lock(disk_mutex);
+    json disks_json = json::array();
+    for (int i = 0; i < disks.size(); ++i) {
+        std::string status_str;
+        switch (disks[i].status) {
+            case ONLINE: status_str = "ONLINE"; break;
+            case BUSY: status_str = "BUSY"; break;
+            case REBUILDING: status_str = "REBUILDING"; break;
+            case FAILED: status_str = "FAILED"; break;
+        }
+        disks_json.push_back({
+            {"name", "Disk D" + std::to_string(i+1)},
+            {"status", status_str},
+            {"activity", disks[i].last_activity + " (" + time_since(disks[i].last_change) + ")"}
+        });
+    }
+    return {{"tag", "disk_status"}, {"disks", disks_json}};
+}
+
+// Refresca el estado de todos los discos antes de cada acción
+void refresh_all_disks_status(DiskState during_action, const std::string& activity) {
+    for (int i = 0; i < numDisks; ++i) {
+        if (is_disk_alive(diskAddrs[i], diskPorts[i])) {
+            set_disk_status(i, during_action, activity);
+        } else {
+            set_disk_status(i, FAILED, "No response");
+        }
+    }
+}
+
+// Refresca el estado de todos los discos después de cada acción
+void refresh_all_disks_status_post(const std::string& activity) {
+    for (int i = 0; i < numDisks; ++i) {
+        if (is_disk_alive(diskAddrs[i], diskPorts[i])) {
+            set_disk_status(i, ONLINE, activity);
+        } else {
+            set_disk_status(i, FAILED, "No response");
+        }
+    }
+}
+
 int main() {
     Server server;
 
@@ -30,13 +109,15 @@ int main() {
     server.set_payload_max_length(200 * 1024 * 1024);
 
     // 1) Ping
-    server.Get("/ping", [](const Request&, Response& res) {
-        json j = { { "estado", "activo" } };
+    server.Get("/ping", [&](const Request& req, Response& res) {
+        refresh_all_disks_status_post("Ping checked");
+        json j = {{"estado", "activo"}, {"disk_status", get_disk_status_json()}};
         res.set_content(j.dump(), "application/json");
     });
 
     // 2) Upload RAID-5
     server.Post("/upload", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Uploading");
         auto filename = req.get_param_value("name");
         auto data = req.body;
         // Guardar tamaño original
@@ -134,20 +215,20 @@ int main() {
                 );
                 locations.emplace_back(disk, diskBlockIdx);
             }
-            
-            
         }
         
         std::cerr << "[DEBUG] total stripes=" << (locations.size()/numDisks)
         << " total blocks=" << locations.size() << "\n";
         fileMap[filename] = std::move(locations);
-        json j = { { "status", "OK" } };
+        refresh_all_disks_status_post("Upload complete");
+        json j = { { "status", "OK" }, { "disk_status", get_disk_status_json() } };
         res.set_content(j.dump(), "application/json");
     });
 
 
     // 3) Download RAID-5
     server.Get("/download", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Downloading");
         auto filename = req.get_param_value("name");
         auto itLoc = fileMap.find(filename);
         auto itSz  = fileSizeMap.find(filename);
@@ -226,6 +307,8 @@ int main() {
         if (output.size() > origSize) {
             output.resize(origSize);
         }
+        refresh_all_disks_status_post("Download complete");
+        json j = {{"status", "OK"}, {"disk_status", get_disk_status_json()}};
         res.set_content(output, "application/octet-stream");
     });
     
@@ -260,6 +343,7 @@ int main() {
 
     // 4) DELETE RAID-5 (limpia sólo los bloques de este archivo)
     server.Delete("/delete", [&](const Request& req, Response& res) {
+        refresh_all_disks_status(BUSY, "Deleting");
         auto filename = req.get_param_value("name");
         // Busca los metadatos de este archivo
         auto itLoc = fileMap.find(filename);
@@ -296,7 +380,8 @@ int main() {
         fileSizeMap.erase(filename);
 
         // Respuesta OK
-        json j = { { "status", "deleted" } };
+        refresh_all_disks_status_post("Delete complete");
+        json j = {{"status", "deleted"}, {"disk_status", get_disk_status_json()}};
         res.set_content(j.dump(), "application/json");
     });
 
@@ -342,37 +427,31 @@ int main() {
     // 8) Reboot disk (placeholder - no hace nada por ahora)
     server.Post("/reboot", [&](const Request& req, Response& res) {
         auto diskName = req.get_param_value("disk");
-        
-        // Debug: log reboot request
-        std::cerr << "[REBOOT] Request to reboot disk: " << diskName << "\n";
-        
-        // TODO: Implement actual disk reboot logic
-        // For now, just return success message
-        json j = {
-            {"status", "accepted"},
-            {"disk", diskName},
-            {"message", "Reboot request received - not implemented yet"},
-            {"action", "placeholder"}
-        };
+        int idx = -1;
+        for (int i = 0; i < numDisks; ++i) {
+            if (diskName == "Disk D" + std::to_string(i+1)) idx = i;
+        }
+        if (idx >= 0) {
+            set_disk_status(idx, REBUILDING, "Rebooting");
+            // Simula reboot: stop/start contenedor (real: system call a docker-compose)
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Simulación
+            if (is_disk_alive(diskAddrs[idx], diskPorts[idx])) {
+                set_disk_status(idx, ONLINE, "Reboot complete");
+            } else {
+                set_disk_status(idx, FAILED, "No response after reboot");
+            }
+            json j = {{"status", "accepted"}, {"disk_status", get_disk_status_json()}};
+            res.set_content(j.dump(), "application/json");
+        } else {
+            json j = {{"status", "error"}, {"message", "Invalid disk"}, {"disk_status", get_disk_status_json()}};
+            res.set_content(j.dump(), "application/json");
+        }
+    });
+
+    server.Get("/disk-status", [&](const Request& req, Response& res) {
+        json j = get_disk_status_json();
         res.set_content(j.dump(), "application/json");
     });
-
-    // 9) Disk status (hardcoded for GUI)
-    server.Get("/disk-status", [&](const Request& /*req*/, Response& res) {
-        json response = {
-            {"disk_status", {
-                {"tag", "disk_status"},
-                {"disks", {
-                    {{"name", "Disk D1"}, {"status", "ONLINE"}, {"activity", "1 minute ago"}},
-                    {{"name", "Disk D2"}, {"status", "REBUILDING"}, {"activity", "3 seconds ago"}},
-                    {{"name", "Disk D3"}, {"status", "BUSY"}, {"activity", "Active now"}},
-                    {{"name", "Disk D4"}, {"status", "FAILED"}, {"activity", "System error"}}
-                }}
-            }}
-        };
-        res.set_content(response.dump(), "application/json");
-    });
-
 
     std::cout << "Controller escuchando en puerto 8080..." << std::endl;
     server.listen("0.0.0.0", 8080);

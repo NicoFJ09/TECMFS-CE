@@ -238,9 +238,6 @@ class FileManagerPanel(QFrame):
 
     def upload_file(self):
         """Handle file upload"""
-        if self.action_manager:
-            self.action_manager.upload_file()
-            
         # Open file dialog
         file_path, _ = QFileDialog.getOpenFileName(
             self,

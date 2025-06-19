@@ -82,6 +82,10 @@ def write_block():
         os.fsync(f.fileno())
     return ("", 204)
 
+@app.route("/ping", methods=["GET"])
+def ping():
+    return {"estado": "activo"}, 200
+
 if __name__ == "__main__":
     # Arranca en el puerto indicado por el XML
     app.run(host="0.0.0.0", port=ctrl_port)

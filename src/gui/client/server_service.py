@@ -48,7 +48,7 @@ class ServerService(QObject):
         """Stop server monitoring"""
         self.polling_active = False
         self.error_occurred.emit("SYSTEM", "Server monitoring stopped")
-        
+
     def _monitor_server(self, interval):
         """Server monitoring thread"""
         while self.polling_active:
@@ -62,9 +62,7 @@ class ServerService(QObject):
                         self.connection_status_changed.emit(True)
                         self.error_occurred.emit("SYSTEM", DEFAULT_MESSAGES["connection_restored"])
                         self.fallback_data_sent = False  # Reset flag when connected
-                    
-                    # Get server data
-                    self._fetch_server_data()
+
                 else:
                     if self.is_connected:
                         self.is_connected = False
@@ -80,21 +78,6 @@ class ServerService(QObject):
                 self.error_occurred.emit("ERROR", f"Server monitoring error: {str(e)}")
                 
             time.sleep(interval)
-    
-    def _fetch_server_data(self):
-        """Get real server data"""
-        try:
-            # Get disk status from dedicated endpoint (hardcoded)
-            disk_data = self.http_client.get("/disk-status")
-            if disk_data and "disk_status" in disk_data:
-                self.data_received.emit(disk_data["disk_status"])
-            
-            # Get real file data from individual endpoints
-            self._fetch_individual_data()
-                
-        except Exception as e:
-            self.error_occurred.emit("ERROR", f"Failed to fetch server data: {str(e)}")
-            self._send_fallback_data()
     
     def _fetch_individual_data(self):
         """Build data from individual endpoints"""
@@ -138,6 +121,8 @@ class ServerService(QObject):
         try:
             response = self.http_client.get("/ping")
             if response:
+                if "disk_status" in response:
+                    self.data_received.emit(response["disk_status"])
                 self.error_occurred.emit("SYSTEM", f"Server ping successful: {response}")
                 return True
             else:
@@ -281,6 +266,8 @@ class ServerService(QObject):
             )
             
             if response and response.get("status") == "OK":
+                if "disk_status" in response:
+                    self.data_received.emit(response["disk_status"])
                 self.error_occurred.emit("INFO", f"File '{filename}' uploaded successfully")
                 self.fetch_file_list()
                 return True
@@ -327,6 +314,8 @@ class ServerService(QObject):
             response = self.http_client.delete(f"/delete?name={filename}")
                     
             if response and response.get("status") == "deleted":
+                if "disk_status" in response:
+                    self.data_received.emit(response["disk_status"])
                 self.error_occurred.emit("INFO", f"File '{filename}' deleted successfully")
                 self.fetch_file_list()
                 return True
@@ -350,6 +339,8 @@ class ServerService(QObject):
             print("DEBUG reboot response:", response)  # Para depuración
 
             if response and response.get("status") == "accepted":
+                if "disk_status" in response:
+                    self.data_received.emit(response["disk_status"])
                 msg = response.get("message", "")
                 self.error_occurred.emit("INFO", f"Reboot request sent for {disk_name}: {msg}")
                 return True, msg

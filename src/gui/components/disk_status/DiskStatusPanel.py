@@ -27,7 +27,7 @@ class DiskStatusPanel(QFrame):
         self.disks = []
         self.info_labels = []
         disk_names = ["Disk D1", "Disk D2", "Disk D3", "Disk D4"]
-        statuses = [DiskStatus.ONLINE, DiskStatus.REBUILDING, DiskStatus.BUSY, DiskStatus.FAILED]
+        statuses = [DiskStatus.ONLINE, DiskStatus.ONLINE, DiskStatus.ONLINE, DiskStatus.ONLINE]
         
         # Cylinder visualization section
         cylinders_layout = QVBoxLayout()
@@ -152,14 +152,21 @@ class DiskStatusPanel(QFrame):
                     background-color: #bd2130;
                 }}
             """)
-
-    def update_disk_status(self, disk_index, status, last_activity):
-        if 0 <= disk_index < len(self.disks):
-            self.disks[disk_index].set_status(status)
             
-            info_text = f"<b>Disk D{disk_index + 1}</b><br>"
-            info_text += f"Status: <b>{status.name}</b><br>"
-            info_text += f"Last activity: {last_activity}"
-            
-            self.info_labels[disk_index].setText(info_text)
-            self.update_responsive_styling()
+    def update_disk_status(self, disk_status_data):
+        """
+        Actualiza la UI de discos usando solo los datos recibidos del servidor.
+        """
+        disks = disk_status_data.get("disks", [])
+        for i, disk in enumerate(disks):
+            name = disk.get("name", f"Disk D{i+1}")
+            status = disk.get("status", "UNKNOWN")
+            activity = disk.get("activity", "")
+            # Actualiza el label o widget correspondiente en tu UI
+            if i < len(self.info_labels):
+                self.info_labels[i].setText(
+                    f"<b>{name}</b><br>Status: <b>{status}</b><br>Last activity: {activity}"
+                )
+            if hasattr(self, "disks") and i < len(self.disks):
+                # Si tienes un widget visual para el estado, actualízalo aquí
+                self.disks[i].set_status(status)

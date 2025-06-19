@@ -12,16 +12,8 @@ class DiskMonitor:
         }
 
     def update_from_json(self, data):
-        """Aquí es donde los datos del servidor se registran en el DiskStatusPanel"""
-        disks = data.get("disks", [])
-        for i, disk in enumerate(disks):
-            if i < len(self.panel.disks):
-                # Status to enum
-                status_str = disk.get("status", "FAILED")
-                status_enum = self.status_mapping.get(status_str, DiskStatus.FAILED)
-
-                self.panel.update_disk_status(
-                    i,
-                    status_enum,
-                    disk.get("activity", "No activity")
-                )
+        """
+        Aquí es donde los datos del servidor se registran en el DiskStatusPanel.
+        """
+        if hasattr(self.panel, "update_disk_status"):
+            self.panel.update_disk_status(data)
